@@ -1,0 +1,38 @@
+---
+alwaysApply: true
+---
+IMPORTANT — DATABASE & CONTENT RULES (MUST FOLLOW STRICTLY)
+
+1) All SQL INSERT statements for table "quotes" MUST use this fixed user_id:
+   '2ed78e5b-55f9-4343-ba1b-fadcc1dd2555'
+   - Never use NULL for user_id
+   - Never ask to confirm the user_id
+   - Always auto-insert using this value
+
+2) Quote formatting rules:
+   - Do NOT use Chinese quotation marks: 「 」
+   - Do NOT use English quotation marks for the content itself
+   - Quote text must be plain text only
+   - original_text, cleaned_text_en, cleaned_text_zh_tw, cleaned_text_zh_cn
+     must contain ONLY the sentence, no wrapping symbols
+
+3) SQL schema assumption (do not change):
+   Table: quotes
+   Required columns:
+   - user_id (UUID, NOT NULL)
+   - original_text (TEXT, NOT NULL)
+   - cleaned_text_en
+   - cleaned_text_zh_tw
+   - cleaned_text_zh_cn
+
+4) original_text MUST be the English version of the quote
+   - cleaned_text_en may be the same as original_text
+   - Chinese versions must be natural translations, not literal
+
+5) Output format:
+   - Only output valid SQL
+   - No explanations
+   - No filenames
+   - No markdown
+   - No comments
+   
