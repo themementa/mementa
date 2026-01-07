@@ -3,7 +3,6 @@
 import { useLanguage } from "@/app/providers/language-provider";
 import { getTranslation } from "@/lib/i18n";
 import { cleanText } from "@/lib/text-cleaning";
-// @ts-ignore - opencc-js doesn't have types
 import { Converter } from "opencc-js";
 
 type CleanButtonProps = {
