@@ -1,10 +1,15 @@
 "use server";
 
-import { requireUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function updateProfile(formData: FormData) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
   const displayName = String(formData.get("displayName") || "").trim();
 
   if (!displayName) {
@@ -24,7 +29,12 @@ export async function updateProfile(formData: FormData) {
 }
 
 export async function changePassword(formData: FormData) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
   const currentPassword = String(formData.get("currentPassword") || "");
   const newPassword = String(formData.get("newPassword") || "");
   const confirmPassword = String(formData.get("confirmPassword") || "");
@@ -44,8 +54,12 @@ export async function changePassword(formData: FormData) {
   const supabase = createSupabaseServerClient();
 
   // Verify current password by attempting to sign in
+  if (!user.email) {
+    return { error: "User email is not available" };
+  }
+
   const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: user.email!,
+    email: user.email,
     password: currentPassword,
   });
 
@@ -71,7 +85,12 @@ export async function updateUserSettings(settings: {
   notificationTime?: string;
   editAllowedAfterSave?: boolean;
 }) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.auth.updateUser({
