@@ -33,20 +33,31 @@ export async function saveJournalAction(formData: FormData) {
 }
 
 export async function getJournalAction(quoteId: string, dateString: string) {
-  const user = await requireUser();
-  
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
   try {
-    const journal = await getJournalEntry(user.id, quoteId, dateString);
-    return { journal };
+    const journal = await getJournalEntry(
+      user.id,
+      quoteId,
+      dateString
+    );
+    return journal;
   } catch (error) {
-    console.error("[getJournalAction] Error:", error);
-    return { error: error instanceof Error ? error.message : "Failed to get journal" };
+    return null;
   }
 }
 
 export async function deleteJournalAction(journalId: string) {
-  const user = await requireUser();
-  
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
   try {
     await deleteJournalEntry(journalId, user.id);
     return { success: true };
