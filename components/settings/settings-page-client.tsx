@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
 import { useLanguage } from "@/app/providers/language-provider";
 import { getTranslation } from "@/lib/i18n";
 // signOut is handled via Route Handler
@@ -168,25 +168,14 @@ export function SettingsPageClient({ user: initialUser }: SettingsPageClientProp
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 touch-manipulation"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer"
                       tabIndex={-1}
+                      aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                     >
                       {showCurrentPassword ? (
-                        <Image
-                          src="/icons/eye-closed.svg"
-                          alt="Hide password"
-                          width={20}
-                          height={20}
-                          className="w-5 h-5"
-                        />
+                        <EyeOff size={18} />
                       ) : (
-                        <Image
-                          src="/icons/eye-open.svg"
-                          alt="Show password"
-                          width={20}
-                          height={20}
-                          className="w-5 h-5"
-                        />
+                        <Eye size={18} />
                       )}
                     </button>
                   </div>
@@ -208,25 +197,14 @@ export function SettingsPageClient({ user: initialUser }: SettingsPageClientProp
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 touch-manipulation"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer"
                       tabIndex={-1}
+                      aria-label={showNewPassword ? "Hide password" : "Show password"}
                     >
                       {showNewPassword ? (
-                        <Image
-                          src="/icons/eye-closed.svg"
-                          alt="Hide password"
-                          width={20}
-                          height={20}
-                          className="w-5 h-5"
-                        />
+                        <EyeOff size={18} />
                       ) : (
-                        <Image
-                          src="/icons/eye-open.svg"
-                          alt="Show password"
-                          width={20}
-                          height={20}
-                          className="w-5 h-5"
-                        />
+                        <Eye size={18} />
                       )}
                     </button>
                   </div>
@@ -248,25 +226,14 @@ export function SettingsPageClient({ user: initialUser }: SettingsPageClientProp
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 touch-manipulation"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer"
                       tabIndex={-1}
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                     >
                       {showConfirmPassword ? (
-                        <Image
-                          src="/icons/eye-closed.svg"
-                          alt="Hide password"
-                          width={20}
-                          height={20}
-                          className="w-5 h-5"
-                        />
+                        <EyeOff size={18} />
                       ) : (
-                        <Image
-                          src="/icons/eye-open.svg"
-                          alt="Show password"
-                          width={20}
-                          height={20}
-                          className="w-5 h-5"
-                        />
+                        <Eye size={18} />
                       )}
                     </button>
                   </div>

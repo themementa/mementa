@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/app/providers/language-provider";
 import { getTranslation } from "@/lib/i18n";
-import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
 
 const FOCUS_MOMENT_KEY = "mementa_focus_moment";
 
@@ -258,25 +258,14 @@ export function LoginClient() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 touch-manipulation"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer"
               tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
-                <Image
-                  src="/icons/eye-closed.svg"
-                  alt="Hide password"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
+                <EyeOff size={18} />
               ) : (
-                <Image
-                  src="/icons/eye-open.svg"
-                  alt="Show password"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
+                <Eye size={18} />
               )}
             </button>
           </div>
