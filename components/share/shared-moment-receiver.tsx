@@ -32,7 +32,8 @@ export function SharedMomentReceiver({ type, content }: SharedMomentReceiverProp
     setHasReceived(true);
     // Optionally navigate away after a moment, or just stay
     setTimeout(() => {
-      router.push("/home");
+      // Navigate to home - middleware will handle auth routing
+      window.location.href = "/home";
     }, 2000);
   };
 

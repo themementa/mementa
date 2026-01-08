@@ -2,7 +2,12 @@ import { requireUser } from "@/lib/auth";
 import { SettingsPageClient } from "@/components/settings/settings-page-client";
 
 export default async function SettingsPage() {
+  // Middleware handles auth redirects, but we need user data
   const user = await requireUser();
+  if (!user) {
+    // This should never happen due to middleware, but TypeScript requires the check
+    throw new Error("Unauthorized");
+  }
 
   return (
     <SettingsPageClient

@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function getCurrentUser() {
@@ -9,17 +8,20 @@ export async function getCurrentUser() {
   return user;
 }
 
+/**
+ * Get the current authenticated user.
+ * 
+ * IMPORTANT: This function does NOT redirect.
+ * Middleware handles all authentication redirects.
+ * 
+ * Returns null if user is not authenticated.
+ */
 export async function requireUser() {
   const supabase = createSupabaseServerClient();
 
   const {
     data: { user }
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    // ✅ 封版做法：直接 redirect
-    redirect("/login");
-  }
 
   return user;
 }

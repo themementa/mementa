@@ -1,12 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { signUpWithEmailPassword } from "@/actions/auth-actions";
 
 export default function SignupPage() {
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // CRITICAL FIX: Read language from URL parameter or localStorage
+  // This ensures signup page respects the language selected on login page
+  const [signupLanguage, setSignupLanguage] = useState<"zh-tw" | "zh-cn" | "en">("zh-tw");
+  
+  useEffect(() => {
+    // First, try to get language from URL parameter (from login page)
+    const langParam = searchParams?.get("lang");
+    if (langParam && (langParam === "zh-tw" || langParam === "zh-cn" || langParam === "en")) {
+      setSignupLanguage(langParam as "zh-tw" | "zh-cn" | "en");
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mementa_login_lang", langParam);
+      }
+    } else if (typeof window !== "undefined") {
+      // Fallback to localStorage (from login page)
+      const storedLang = localStorage.getItem("mementa_login_lang");
+      if (storedLang && (storedLang === "zh-tw" || storedLang === "zh-cn" || storedLang === "en")) {
+        setSignupLanguage(storedLang as "zh-tw" | "zh-cn" | "en");
+      }
+    }
+  }, [searchParams]);
 
   async function handleSubmit(formData: FormData) {
     setError(null);
@@ -21,17 +46,69 @@ export default function SignupPage() {
       // 如果成功，會自動 redirect，所以這裡不需要處理
     } catch (err) {
       console.error("Signup form error:", err);
-      setError(err instanceof Error ? err.message : "發生未知錯誤");
+      const errorMessages = {
+        "zh-tw": "發生未知錯誤",
+        "zh-cn": "发生未知错误",
+        "en": "An unknown error occurred",
+      };
+      setError(err instanceof Error ? err.message : errorMessages[signupLanguage]);
       setIsLoading(false);
     }
   }
 
+  // Get localized text based on signupLanguage
+  const getSignupText = (key: string) => {
+    const translations: Record<string, Record<"zh-tw" | "zh-cn" | "en", string>> = {
+      title: {
+        "zh-tw": "建立帳號",
+        "zh-cn": "建立账号",
+        "en": "Create Account",
+      },
+      subtitle: {
+        "zh-tw": "用 Email + 密碼建立你的 Mementa 帳號。",
+        "zh-cn": "用 Email + 密码建立你的 Mementa 账号。",
+        "en": "Create your Mementa account with email and password.",
+      },
+      email: {
+        "zh-tw": "Email",
+        "zh-cn": "Email",
+        "en": "Email",
+      },
+      password: {
+        "zh-tw": "密碼（至少 6 碼）",
+        "zh-cn": "密码（至少 6 码）",
+        "en": "Password (at least 6 characters)",
+      },
+      processing: {
+        "zh-tw": "處理中...",
+        "zh-cn": "处理中...",
+        "en": "Processing...",
+      },
+      createAccount: {
+        "zh-tw": "建立帳號",
+        "zh-cn": "建立账号",
+        "en": "Create Account",
+      },
+      hasAccount: {
+        "zh-tw": "已經有帳號？",
+        "zh-cn": "已经有账号？",
+        "en": "Already have an account?",
+      },
+      login: {
+        "zh-tw": "直接登入",
+        "zh-cn": "直接登录",
+        "en": "Log in",
+      },
+    };
+    return translations[key]?.[signupLanguage] || key;
+  };
+
   return (
     <div className="flex flex-1 flex-col justify-center gap-8">
       <div>
-        <h1 className="text-2xl font-semibold">建立帳號</h1>
+        <h1 className="text-2xl font-semibold">{getSignupText("title")}</h1>
         <p className="mt-2 text-sm text-neutral-600">
-          用 Email + 密碼建立你的 Mementa 帳號。
+          {getSignupText("subtitle")}
         </p>
       </div>
 
@@ -44,7 +121,7 @@ export default function SignupPage() {
       <form action={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="email">
-            Email
+            {getSignupText("email")}
           </label>
           <input
             id="email"
@@ -57,16 +134,43 @@ export default function SignupPage() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="password">
-            密碼（至少 6 碼）
+            {getSignupText("password")}
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            minLength={6}
-            required
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
-          />
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              minLength={6}
+              required
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 pr-10 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 touch-manipulation"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <Image
+                  src="/icons/eye-closed.svg"
+                  alt="Hide password"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
+              ) : (
+                <Image
+                  src="/icons/eye-open.svg"
+                  alt="Show password"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
+              )}
+            </button>
+          </div>
         </div>
 
         <button
@@ -74,14 +178,17 @@ export default function SignupPage() {
           disabled={isLoading}
           className="mt-2 w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60"
         >
-          {isLoading ? "處理中..." : "建立帳號"}
+          {isLoading ? getSignupText("processing") : getSignupText("createAccount")}
         </button>
       </form>
 
       <p className="text-xs text-neutral-600">
-        已經有帳號？{" "}
-        <Link href="/login" className="font-medium text-neutral-900 underline">
-          直接登入
+        {getSignupText("hasAccount")}{" "}
+        <Link 
+          href={`/login?lang=${signupLanguage}`} 
+          className="font-medium text-neutral-900 underline"
+        >
+          {getSignupText("login")}
         </Link>
       </p>
     </div>

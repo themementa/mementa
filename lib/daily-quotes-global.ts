@@ -90,12 +90,16 @@ export async function getTodaysGlobalQuote(): Promise<Quote | null> {
     .select("*");
 
   if (quotesError) {
+    console.error("[getTodaysGlobalQuote] Database error:", quotesError);
     throw new Error(quotesError.message);
   }
 
   if (!allQuotes || allQuotes.length === 0) {
+    console.warn("[getTodaysGlobalQuote] No quotes found in database");
     return null;
   }
+
+  console.log(`[getTodaysGlobalQuote] Found ${allQuotes.length} quotes in database`);
 
   // Get used quote IDs
   const usedQuoteIds = await getUsedQuoteIds();
@@ -114,8 +118,13 @@ export async function getTodaysGlobalQuote(): Promise<Quote | null> {
   const randomIndex = Math.floor(Math.random() * quotesToChooseFrom.length);
   const selectedQuote = quotesToChooseFrom[randomIndex];
 
-  // Save to daily_quotes
-  await setTodaysQuote(selectedQuote.id);
+  // Save to daily_quotes (but don't fail if this fails - quote selection is more important)
+  try {
+    await setTodaysQuote(selectedQuote.id);
+  } catch (saveError) {
+    // Log but don't fail - we can still return the quote even if saving fails
+    console.warn("[getTodaysGlobalQuote] Failed to save to daily_quotes, but returning quote anyway:", saveError);
+  }
 
   return selectedQuote;
 }

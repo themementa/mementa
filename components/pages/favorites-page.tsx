@@ -30,7 +30,7 @@ export function FavoritesPage({ quotes }: FavoritesPageProps) {
               {getTranslation(language, "noFavorites")}
             </p>
             <Link
-              href="/quotes"
+              href="/home"
               className="inline-block px-6 py-3 text-sm font-normal rounded-lg bg-stone-100 text-stone-600 touch-manipulation min-h-[44px]"
             >
               {getTranslation(language, "goToFavorites")}

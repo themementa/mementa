@@ -1,21 +1,15 @@
-import { getCurrentUser } from "@/lib/auth";
-import { redirect } from "next/navigation";
+// ⚠️ IMPORTANT
+// This is a public intro page.
+// Do NOT add auth checks or redirects here.
+// "/" must never be used as a functional entry point.
+// Middleware handles all authentication routing.
+
 import { FirstOpenExperience } from "@/components/landing/first-open-experience";
 
-export default async function RootPage() {
-  const user = await getCurrentUser();
-
-  // If user is logged in, redirect to protected home
-  if (user) {
-    redirect("/");
-  }
-
-  // Show first-open experience for non-logged-in users
-  // The component itself will check if it's been seen before
+export default function Page() {
   return (
     <div className="min-h-screen">
       <FirstOpenExperience />
     </div>
   );
 }
-

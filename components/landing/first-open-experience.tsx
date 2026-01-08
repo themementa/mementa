@@ -24,7 +24,8 @@ export function FirstOpenExperience() {
     if (typeof window !== "undefined") {
       localStorage.setItem(FIRST_OPEN_KEY, "true");
     }
-    router.push("/login");
+    // Navigate to login - middleware will handle auth routing
+    window.location.href = "/login";
   };
 
   if (!mounted) {

@@ -29,9 +29,25 @@ export function LoginClient() {
   const [passwordErrorCount, setPasswordErrorCount] = useState(0);
 
   // Login 頁臨時語言選擇（不寫入 DB）
-  const [loginLanguage, setLoginLanguage] = useState<"zh-tw" | "zh-cn" | "en">(
-    (typeof window !== "undefined" && localStorage.getItem("mementa_login_lang")) as "zh-tw" | "zh-cn" | "en" || "zh-tw"
-  );
+  // CRITICAL FIX: Read language from URL parameter first (from signup page), then localStorage
+  const [loginLanguage, setLoginLanguage] = useState<"zh-tw" | "zh-cn" | "en">("zh-tw");
+
+  useEffect(() => {
+    // First, try to get language from URL parameter (from signup page)
+    const langParam = searchParams?.get("lang");
+    if (langParam && (langParam === "zh-tw" || langParam === "zh-cn" || langParam === "en")) {
+      setLoginLanguage(langParam as "zh-tw" | "zh-cn" | "en");
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mementa_login_lang", langParam);
+      }
+    } else if (typeof window !== "undefined") {
+      // Fallback to localStorage
+      const storedLang = localStorage.getItem("mementa_login_lang");
+      if (storedLang && (storedLang === "zh-tw" || storedLang === "zh-cn" || storedLang === "en")) {
+        setLoginLanguage(storedLang as "zh-tw" | "zh-cn" | "en");
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (focusMoment && typeof window !== "undefined") {
@@ -78,9 +94,10 @@ export function LoginClient() {
         return;
       }
 
-      // Login successful - reset error count and redirect
+      // Login successful - reset error count
       setPasswordErrorCount(0);
-      router.push("/home");
+      // Redirect handled by middleware after page reload
+      window.location.href = "/home";
     } catch (err) {
       console.error("[LoginClient] 登入錯誤:", err);
       setError(err instanceof Error ? err.message : getLoginText("unknownError"));
@@ -290,7 +307,10 @@ export function LoginClient() {
 
       <p className="text-xs text-neutral-600">
         {getLoginText("noAccount")}{" "}
-        <Link href="/signup" className="font-medium text-neutral-900 underline">
+        <Link 
+          href={`/signup?lang=${loginLanguage}`} 
+          className="font-medium text-neutral-900 underline"
+        >
           {getLoginText("signup")}
         </Link>
       </p>

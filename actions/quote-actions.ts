@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { updateQuote, getQuoteById } from "@/lib/quotes";
 
@@ -16,8 +15,7 @@ export async function updateQuoteAction(formData: FormData) {
   const cleanedTextRaw = formData.get(fieldName);
 
   if (!id) {
-    redirect("/quotes");
-    return;
+    return { error: "Missing quote ID" };
   }
 
   const originalText =
@@ -55,7 +53,7 @@ export async function updateQuoteAction(formData: FormData) {
 
   await updateQuote(updateParams);
 
-  redirect(`/quote/${id}`);
+  return { success: true, id };
 }
 
 export async function cleanQuoteAction(formData: FormData) {
@@ -101,7 +99,7 @@ export async function cleanQuoteAction(formData: FormData) {
     cleanedTextZhTw: cleanedText
   });
 
-  redirect(`/quote/${id}`);
+  return { success: true, id };
 }
 
 

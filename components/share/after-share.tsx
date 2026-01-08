@@ -51,7 +51,8 @@ export function AfterShare({ onClose, sharedContent }: AfterShareProps) {
   }, [showAffirmation]);
 
   const handleReturn = () => {
-    router.push("/home");
+    // Navigate to home - middleware will handle auth routing
+    window.location.href = "/home";
   };
 
   const handleSitQuietly = () => {

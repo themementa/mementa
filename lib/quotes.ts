@@ -19,7 +19,16 @@ export async function getAllQuotes(): Promise<Quote[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
+    console.error("[getAllQuotes] Database error:", error);
     throw new Error(error.message);
+  }
+
+  // Log actual data count for debugging
+  const count = data?.length ?? 0;
+  if (count === 0) {
+    console.warn("[getAllQuotes] No quotes found in database");
+  } else {
+    console.log(`[getAllQuotes] Found ${count} quotes`);
   }
 
   return (data ?? []) as Quote[];
@@ -42,6 +51,30 @@ export async function getQuoteById(id: string): Promise<Quote | null> {
   }
 
   return data as Quote;
+}
+
+/**
+ * Get the first available quote from the database as a fallback
+ * Used when primary data fetching fails but we know data exists
+ */
+export async function getFirstAvailableQuote(): Promise<Quote | null> {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("quotes")
+    .select("*")
+    .limit(1)
+    .order("created_at", { ascending: false })
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      // No quotes in database
+      return null;
+    }
+    throw new Error(error.message);
+  }
+
+  return data as Quote | null;
 }
 
 export async function updateQuote(params: {

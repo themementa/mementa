@@ -13,7 +13,7 @@ import { useNightMode } from "@/hooks/use-night-mode";
 import { getNightModeStyles } from "@/lib/night-mode";
 
 type TodaysQuoteDisplayProps = {
-  quote: Quote;
+  quote: Quote | null | undefined;
   favoriteIds: string[];
   focusMoment?: boolean;
 };
@@ -192,11 +192,28 @@ function generateShareImage(text: string): Promise<Blob> {
   });
 }
 
+// CRITICAL FIX: Hardcoded fallback quote to ensure UI never renders blank
+// This is a temporary fallback until data fetching is guaranteed
+const FALLBACK_QUOTE: Quote = {
+  id: "fallback-quote",
+  user_id: null,
+  original_text: "Take a moment. You're here.",
+  cleaned_text_en: "Take a moment. You're here.",
+  cleaned_text_zh_tw: "停一停，你在這裡。",
+  cleaned_text_zh_cn: "停一停，你在这里。",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMoment = false }: TodaysQuoteDisplayProps) {
   const { language } = useLanguage();
   const nightMode = useNightMode();
   const nightStyles = getNightModeStyles();
-  const [quote] = useState<Quote>(initialQuote);
+  
+  // CRITICAL FIX: Force use fallback quote if initialQuote is null/undefined
+  // This ensures UI NEVER renders blank, even if data fetching fails
+  const safeQuote = initialQuote || FALLBACK_QUOTE;
+  const [quote] = useState<Quote>(safeQuote);
   const [mounted, setMounted] = useState(false);
   const [journalText, setJournalText] = useState("");
   const [showSaveMessage, setShowSaveMessage] = useState(false);
@@ -315,7 +332,12 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
 
   const isFavorited = favoriteIds.includes(quote.id);
   // Display text changes based on language, but quote remains the same
-  const displayText = getQuoteDisplayText(quote, language ?? "zh-tw");
+  // CRITICAL FIX: If displayText is empty, use fallback text to ensure UI never renders blank
+  let displayText = getQuoteDisplayText(quote, language ?? "zh-tw");
+  if (!displayText || displayText.trim() === "") {
+    // Fallback to English if current language text is empty
+    displayText = quote.cleaned_text_en || quote.original_text || FALLBACK_QUOTE.cleaned_text_en || "";
+  }
 
   // Format today's date - minimal, elegant
   const today = new Date();

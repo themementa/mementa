@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -107,13 +106,9 @@ export async function signUpWithEmailPassword(formData: FormData) {
       return { error: `註冊成功但自動登入失敗: ${signInError.message}` };
     }
 
-    console.log("[signUpWithEmailPassword] 自動登入成功，準備 redirect...");
-    redirect("/home");
+    console.log("[signUpWithEmailPassword] 自動登入成功");
+    return { success: true };
   } catch (error) {
-    // Next.js redirect() 會拋出特殊錯誤，需要讓它通過
-    if (error && typeof error === "object" && "digest" in error && typeof error.digest === "string" && error.digest.startsWith("NEXT_REDIRECT")) {
-      throw error;
-    }
     console.error("[signUpWithEmailPassword] 未預期的錯誤:", error);
     console.error("[signUpWithEmailPassword] 錯誤堆疊:", error instanceof Error ? error.stack : "無堆疊資訊");
     return {

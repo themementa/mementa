@@ -1,4 +1,3 @@
-import { requireUser } from "@/lib/auth";
 import { SharedMomentReceiver } from "@/components/share/shared-moment-receiver";
 
 type SharePageProps = {
