@@ -1,10 +1,15 @@
 "use server";
 
-import { requireUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { saveJournalEntry, getJournalEntry, deleteJournalEntry } from "@/lib/journals";
 
 export async function saveJournalAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
   const quoteId = String(formData.get("quote_id") || "");
   const dateString = String(formData.get("date") || ""); // YYYY-MM-DD format
   const content = String(formData.get("content") || "").trim();
