@@ -239,9 +239,9 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
     const loadJournal = async () => {
       try {
         const today = new Date().toISOString().split("T")[0];
-        const result = await getJournalAction(quote.id, today);
-        if (result.journal && !result.error) {
-          setJournalText(result.journal.content);
+        const journal = await getJournalAction(quote.id, today);
+        if (journal) {
+          setJournalText(journal.content);
         }
       } catch (error) {
         console.error("Failed to load journal:", error);

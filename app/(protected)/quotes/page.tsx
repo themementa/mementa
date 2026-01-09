@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth";
-import { getAllQuotes, getFirstAvailableQuote } from "@/lib/quotes";
+import { getAllQuotes, getFirstAvailableQuote, type Quote } from "@/lib/quotes";
 import { getFavoriteQuoteIdsForUser } from "@/lib/favorites";
 import { QuotesPage } from "@/components/pages/quotes-page";
 
@@ -23,7 +23,7 @@ export default async function QuotesPageServer() {
   }
   
   // Get all quotes (GLOBAL - same for all users, from all quotes in database)
-  let quotes;
+  let quotes: Quote[] = [];
   try {
     quotes = await getAllQuotes();
     
