@@ -4,6 +4,8 @@ import { getFavoriteQuotesForUser } from "@/lib/favorites";
 import { getAllQuotes } from "@/lib/quotes";
 import type { Quote } from "@/lib/quotes";
 
+export const dynamic = "force-dynamic";
+
 type Language = "zh-tw" | "zh-cn" | "en";
 
 function getQuoteForDate(quotes: Quote[], dateString: string): Quote {
