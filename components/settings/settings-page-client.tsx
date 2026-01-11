@@ -168,15 +168,17 @@ export function SettingsPageClient({ user: initialUser }: SettingsPageClientProp
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer transition-colors duration-200"
                       tabIndex={-1}
                       aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                     >
-                      {showCurrentPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
+                      <span className="inline-block transition-opacity duration-200">
+                        {showCurrentPassword ? (
+                          <EyeOff size={18} strokeWidth={1.5} />
+                        ) : (
+                          <Eye size={18} strokeWidth={1.5} />
+                        )}
+                      </span>
                     </button>
                   </div>
                   
@@ -197,15 +199,17 @@ export function SettingsPageClient({ user: initialUser }: SettingsPageClientProp
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer transition-colors duration-200"
                       tabIndex={-1}
                       aria-label={showNewPassword ? "Hide password" : "Show password"}
                     >
-                      {showNewPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
+                      <span className="inline-block transition-opacity duration-200">
+                        {showNewPassword ? (
+                          <EyeOff size={18} strokeWidth={1.5} />
+                        ) : (
+                          <Eye size={18} strokeWidth={1.5} />
+                        )}
+                      </span>
                     </button>
                   </div>
                   
@@ -226,15 +230,17 @@ export function SettingsPageClient({ user: initialUser }: SettingsPageClientProp
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer transition-colors duration-200"
                       tabIndex={-1}
                       aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                     >
-                      {showConfirmPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
+                      <span className="inline-block transition-opacity duration-200">
+                        {showConfirmPassword ? (
+                          <EyeOff size={18} strokeWidth={1.5} />
+                        ) : (
+                          <Eye size={18} strokeWidth={1.5} />
+                        )}
+                      </span>
                     </button>
                   </div>
                   {passwordError && (

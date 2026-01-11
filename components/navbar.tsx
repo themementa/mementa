@@ -1,10 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/app/providers/language-provider";
 import { getTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 /**
  * Phase 1 Navbar - 包含 7 個核心功能
@@ -14,6 +17,30 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 export function Navbar() {
   const { language, setLanguage } = useLanguage();
   const pathname = usePathname();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setIsLoading(false);
+    });
+
+    // Subscribe to auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // 判斷當前頁面是否為 active
   const isActive = (path: string) => {
@@ -37,6 +64,7 @@ export function Navbar() {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {
+        setUser(null);
         window.location.href = "/login";
       }
     } catch (error) {
@@ -44,6 +72,9 @@ export function Navbar() {
     }
   };
 
+  // Always render navbar in protected routes
+  // Auth state will update via onAuthStateChange subscription
+  // The navbar will appear immediately and update when auth state is confirmed
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-soft-pink-dark/30 pb-3 pt-3">
       <nav className="flex items-center justify-between">
