@@ -148,15 +148,17 @@ export function SignupClient() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700 cursor-pointer transition-colors duration-200"
               tabIndex={-1}
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? (
-                <EyeOff size={18} />
-              ) : (
-                <Eye size={18} />
-              )}
+              <span className="inline-block transition-opacity duration-200">
+                {showPassword ? (
+                  <EyeOff size={18} strokeWidth={1.5} />
+                ) : (
+                  <Eye size={18} strokeWidth={1.5} />
+                )}
+              </span>
             </button>
           </div>
         </div>

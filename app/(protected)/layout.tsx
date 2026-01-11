@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { Navbar } from "@/components/navbar";
 
 export const dynamic = "force-dynamic";
 
@@ -14,5 +15,10 @@ export default async function ProtectedLayout({
 }: {
   children: ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      <Navbar />
+      {children}
+    </>
+  );
 }
