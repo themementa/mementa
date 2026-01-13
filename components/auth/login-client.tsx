@@ -96,8 +96,16 @@ export function LoginClient() {
 
       // Login successful - reset error count
       setPasswordErrorCount(0);
-      // Redirect handled by middleware after page reload
-      window.location.href = "/home";
+      
+      // Check if user has seen intro before
+      const hasSeenIntro = localStorage.getItem("has_seen_intro");
+      if (hasSeenIntro !== "true") {
+        // First login - redirect to intro
+        window.location.href = "/intro";
+      } else {
+        // Subsequent logins - redirect to home
+        window.location.href = "/home";
+      }
     } catch (err) {
       console.error("[LoginClient] 登入錯誤:", err);
       setError(err instanceof Error ? err.message : getLoginText("unknownError"));

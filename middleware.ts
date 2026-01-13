@@ -11,8 +11,8 @@ import { createServerClient } from "@supabase/ssr";
 
 // STEP 1: Absolute public route whitelist (NON-NEGOTIABLE)
 // These paths must NEVER trigger auth checks or redirects
+// Note: "/" is NOT in this list - it redirects to /login for unauthenticated users
 const PUBLIC_PATHS = [
-  "/",
   "/login",
   "/signup",
   "/intro",
@@ -38,6 +38,42 @@ export async function middleware(request: NextRequest) {
   // STEP 3: Emergency escape hatch - prevent infinite redirect loops
   if (request.headers.get("x-redirect-loop") === "1") {
     return NextResponse.next();
+  }
+  
+  // Handle root path: redirect to /login for unauthenticated users
+  if (pathname === "/") {
+    // Check authentication first
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    
+    if (!user) {
+      // Unauthenticated: redirect to /login
+      const loginUrl = new URL("/login", request.url);
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set("x-redirect-loop", "1");
+      return redirectResponse;
+    } else {
+      // Authenticated: redirect to /home
+      const homeUrl = new URL("/home", request.url);
+      const redirectResponse = NextResponse.redirect(homeUrl);
+      redirectResponse.headers.set("x-redirect-loop", "1");
+      return redirectResponse;
+    }
   }
   
   // STEP 1: Absolute public route whitelist - MUST execute BEFORE any auth logic
@@ -111,12 +147,12 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // STEP 2: Disable redirect-on-uncertain-session
+  // STEP 2: Redirect unauthenticated users from protected routes to /login
   // Only redirect if:
   // 1. User is NULL or UNDEFINED
   // 2. Route is protected (already checked above)
-  // 3. Pathname starts with /home, /quotes, or /favorites (critical protected routes)
-  if (!user && (pathname.startsWith("/home") || pathname.startsWith("/quotes") || pathname.startsWith("/favorites"))) {
+  // 3. Pathname matches any protected route
+  if (!user && isProtectedRoute) {
     const loginUrl = new URL("/login", request.url);
     // Preserve the original pathname as a redirect parameter
     loginUrl.searchParams.set("redirect", pathname);

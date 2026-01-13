@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 
 /**
- * Intro Page - Onboarding experience after login
+ * Intro Page - Onboarding experience
  * 
- * MVP Fix: Continue button always navigates to /home
- * No onboarding flags, no middleware changes
+ * This is a public page accessible to all users.
+ * After clicking "繼續", sets has_seen_intro flag and navigates to /home.
  */
 export default function IntroPage() {
   const [mounted, setMounted] = useState(false);
@@ -17,7 +17,11 @@ export default function IntroPage() {
   }, []);
 
   const handleContinue = () => {
-    // MVP Fix: Always navigate to /home
+    // Set intro completion flag before redirecting
+    if (typeof window !== "undefined") {
+      localStorage.setItem("has_seen_intro", "true");
+    }
+    // Navigate to /home
     window.location.href = "/home";
   };
 

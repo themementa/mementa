@@ -192,28 +192,33 @@ function generateShareImage(text: string): Promise<Blob> {
   });
 }
 
-// CRITICAL FIX: Hardcoded fallback quote to ensure UI never renders blank
-// This is a temporary fallback until data fetching is guaranteed
-const FALLBACK_QUOTE: Quote = {
-  id: "fallback-quote",
-  user_id: null,
-  original_text: "Take a moment. You're here.",
-  cleaned_text_en: "Take a moment. You're here.",
-  cleaned_text_zh_tw: "停一停，你在這裡。",
-  cleaned_text_zh_cn: "停一停，你在这里。",
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMoment = false }: TodaysQuoteDisplayProps) {
   const { language } = useLanguage();
   const nightMode = useNightMode();
   const nightStyles = getNightModeStyles();
   
-  // CRITICAL FIX: Force use fallback quote if initialQuote is null/undefined
-  // This ensures UI NEVER renders blank, even if data fetching fails
-  const safeQuote = initialQuote || FALLBACK_QUOTE;
-  const [quote] = useState<Quote>(safeQuote);
+  // If quote is null, render empty state
+  if (!initialQuote) {
+    return (
+      <div 
+        className="min-h-screen flex flex-col justify-center items-center px-4 py-12" 
+        style={{ 
+          background: nightMode 
+            ? 'linear-gradient(135deg, #2C2416 0%, #1F1A12 50%, #1A1510 100%)'
+            : 'linear-gradient(135deg, #FAF9F6 0%, #F7F6F3 50%, #F4F3F0 100%)',
+          transition: `background ${nightStyles.transitionDuration} ease-in-out`
+        }}
+      >
+        <div className="w-full max-w-2xl text-center">
+          <p className="text-lg md:text-xl text-stone-600 text-content-tone">
+            今日仲未有金句 ✨ 去 Quotes 加一句先～
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  const [quote] = useState<Quote>(initialQuote);
   const [mounted, setMounted] = useState(false);
   const [journalText, setJournalText] = useState("");
   const [showSaveMessage, setShowSaveMessage] = useState(false);
@@ -332,11 +337,10 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
 
   const isFavorited = favoriteIds.includes(quote.id);
   // Display text changes based on language, but quote remains the same
-  // CRITICAL FIX: If displayText is empty, use fallback text to ensure UI never renders blank
   let displayText = getQuoteDisplayText(quote, language ?? "zh-tw");
   if (!displayText || displayText.trim() === "") {
     // Fallback to English if current language text is empty
-    displayText = quote.cleaned_text_en || quote.original_text || FALLBACK_QUOTE.cleaned_text_en || "";
+    displayText = quote.cleaned_text_en || quote.original_text || "";
   }
 
   // Format today's date - minimal, elegant
