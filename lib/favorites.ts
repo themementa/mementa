@@ -14,6 +14,20 @@ export async function addFavorite(params: {
   quoteId: string;
 }): Promise<Favorite> {
   const supabase = createSupabaseServerClient();
+  
+  // Verify quote exists (system or user's personal quote)
+  // This allows favoriting system quotes without ownership check
+  const { data: quoteData, error: quoteError } = await supabase
+    .from("quotes")
+    .select("id")
+    .eq("id", params.quoteId)
+    .maybeSingle();
+  
+  if (quoteError || !quoteData) {
+    throw new Error(`Quote not found: ${params.quoteId}`);
+  }
+  
+  // Insert favorite - allows favoriting any quote (system or personal)
   const { data, error } = await supabase
     .from("favorites")
     .insert({
@@ -24,6 +38,7 @@ export async function addFavorite(params: {
     .single();
 
   if (error) {
+    console.error("[addFavorite] Error adding favorite:", error);
     throw new Error(error.message);
   }
 
@@ -107,6 +122,7 @@ export async function getFavoriteQuotesForUser(
 ): Promise<FavoriteWithQuote[]> {
   const supabase = createSupabaseServerClient();
 
+  // Join favorites with quotes (system quotes OR user's personal quotes)
   const { data, error } = await supabase
     .from("favorites")
     .select("favorite_at, quotes(*)")

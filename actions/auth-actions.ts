@@ -93,20 +93,20 @@ export async function signUpWithEmailPassword(formData: FormData) {
 
     console.log("[signUpWithEmailPassword] signUp 成功，user:", signUpData.user?.id);
 
-    // 簡化：註冊後直接幫他登入並導回首頁
-    console.log("[signUpWithEmailPassword] 嘗試自動登入...");
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (signInError) {
-      console.error("[signUpWithEmailPassword] signIn 錯誤:", signInError);
-      console.error("[signUpWithEmailPassword] 錯誤訊息:", signInError.message);
-      return { error: `註冊成功但自動登入失敗: ${signInError.message}` };
+    // Initialize user data in background (don't await - non-blocking)
+    if (signUpData.user) {
+      // Fire and forget - runs in background without blocking response
+      import("@/lib/user-init").then(({ initializeUserData }) => {
+        initializeUserData(signUpData.user!.id).catch((initError) => {
+          // Log but don't fail signup - initialization is best effort
+          console.error("[signUpWithEmailPassword] Background initialization failed:", initError);
+        });
+      }).catch((importError) => {
+        console.error("[signUpWithEmailPassword] Failed to import user-init:", importError);
+      });
     }
 
-    console.log("[signUpWithEmailPassword] 自動登入成功");
+    // Return success immediately - frontend will redirect to /login
     return { success: true };
   } catch (error) {
     console.error("[signUpWithEmailPassword] 未預期的錯誤:", error);

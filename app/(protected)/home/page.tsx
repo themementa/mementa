@@ -1,9 +1,8 @@
 import { requireUser } from "@/lib/auth";
 import { getFavoriteQuoteIdsForUser } from "@/lib/favorites";
 import { getTodaysQuoteAction } from "@/actions/daily-quote-actions";
-import { getFirstAvailableQuote } from "@/lib/quotes";
+import { ensureQuotesSeeded } from "@/lib/seed-quotes";
 import { TodaysQuoteDisplay } from "@/components/quotes/todays-quote-display";
-import { HomeEmptyState } from "@/components/pages/home-empty-state";
 
 /**
  * Next.js 14 App Router: Dynamic route configuration
@@ -44,6 +43,9 @@ export default async function HomePage(): Promise<JSX.Element> {
       // This should never happen due to middleware, but TypeScript requires the check
       throw new Error("Unauthorized");
     }
+    
+    // Ensure quotes are seeded on first visit (idempotent - safe to call multiple times)
+    await ensureQuotesSeeded();
     
     // Get today's quote (GLOBAL - same for all users, from all quotes)
     // This does NOT depend on userId or user's favorites

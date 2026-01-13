@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { getAllQuotes, getFirstAvailableQuote, type Quote } from "@/lib/quotes";
 import { getFavoriteQuoteIdsForUser } from "@/lib/favorites";
+import { ensureQuotesSeeded } from "@/lib/seed-quotes";
 import { QuotesPage } from "@/components/pages/quotes-page";
 
 /**
@@ -21,6 +22,9 @@ export default async function QuotesPageServer() {
     // This should never happen due to middleware, but TypeScript requires the check
     throw new Error("Unauthorized");
   }
+  
+  // Ensure quotes are seeded on first visit (idempotent - safe to call multiple times)
+  await ensureQuotesSeeded();
   
   // Get all quotes (GLOBAL - same for all users, from all quotes in database)
   let quotes: Quote[] = [];

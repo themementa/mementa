@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-import { signUpWithEmailPassword } from "@/actions/auth-actions";
 
 export function SignupClient() {
   const searchParams = useSearchParams();
@@ -33,17 +32,32 @@ export function SignupClient() {
     }
   }, [searchParams]);
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setError(null);
     setIsLoading(true);
 
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
     try {
-      const result = await signUpWithEmailPassword(formData);
-      if (result?.error) {
-        setError(result.error);
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "註冊失敗");
         setIsLoading(false);
+        return;
       }
-      // 如果成功，會自動 redirect，所以這裡不需要處理
+
+      // Success - immediately redirect to login
+      window.location.href = `/login?lang=${signupLanguage}`;
     } catch (err) {
       console.error("Signup form error:", err);
       const errorMessages = {
@@ -118,7 +132,7 @@ export function SignupClient() {
         </div>
       )}
 
-      <form action={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="email">
             {getSignupText("email")}

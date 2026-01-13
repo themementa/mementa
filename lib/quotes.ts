@@ -1,4 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { SYSTEM_USER_ID } from "@/lib/constants";
+import { getCurrentUser } from "@/lib/auth";
 
 export type Quote = {
   id: string;
@@ -13,10 +15,21 @@ export type Quote = {
 
 export async function getAllQuotes(): Promise<Quote[]> {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+  const user = await getCurrentUser();
+  
+  let query = supabase
     .from("quotes")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select("*");
+  
+  // Filter: user's personal quotes OR system quotes
+  if (user) {
+    query = query.in("user_id", [user.id, SYSTEM_USER_ID]);
+  } else {
+    // If no user, only show system quotes
+    query = query.eq("user_id", SYSTEM_USER_ID);
+  }
+  
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
     console.error("[getAllQuotes] Database error:", error);
@@ -36,11 +49,23 @@ export async function getAllQuotes(): Promise<Quote[]> {
 
 export async function getQuoteById(id: string): Promise<Quote | null> {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+  const user = await getCurrentUser();
+  
+  // Allow access to system quotes OR user's personal quotes
+  let query = supabase
     .from("quotes")
     .select("*")
-    .eq("id", id)
-    .single();
+    .eq("id", id);
+  
+  // Filter: user's personal quotes OR system quotes
+  if (user) {
+    query = query.in("user_id", [user.id, SYSTEM_USER_ID]);
+  } else {
+    // If no user, only show system quotes
+    query = query.eq("user_id", SYSTEM_USER_ID);
+  }
+  
+  const { data, error } = await query.single();
 
   if (error) {
     if (error.code === "PGRST116") {
@@ -56,13 +81,26 @@ export async function getQuoteById(id: string): Promise<Quote | null> {
 /**
  * Get the first available quote from the database as a fallback
  * Used when primary data fetching fails but we know data exists
+ * Returns system quote or user's personal quote
  */
 export async function getFirstAvailableQuote(): Promise<Quote | null> {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+  const user = await getCurrentUser();
+  
+  let query = supabase
     .from("quotes")
     .select("*")
-    .limit(1)
+    .limit(1);
+  
+  // Filter: user's personal quotes OR system quotes
+  if (user) {
+    query = query.in("user_id", [user.id, SYSTEM_USER_ID]);
+  } else {
+    // If no user, only show system quotes
+    query = query.eq("user_id", SYSTEM_USER_ID);
+  }
+  
+  const { data, error } = await query
     .order("created_at", { ascending: false })
     .maybeSingle();
 

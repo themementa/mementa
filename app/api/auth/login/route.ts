@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
+import { initializeUserData } from "@/lib/user-init";
 
 /**
  * Login Route Handler
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     // Create client that CAN write cookies (Route Handler context)
     const supabase = createSupabaseRouteHandlerClient();
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -37,6 +38,16 @@ export async function POST(request: Request) {
         { error: error.message },
         { status: 401 }
       );
+    }
+
+    // Initialize user data if this is first login
+    if (authData.user) {
+      try {
+        await initializeUserData(authData.user.id);
+      } catch (initError) {
+        // Log but don't fail login - initialization is best effort
+        console.error("[POST /api/auth/login] Failed to initialize user data:", initError);
+      }
     }
 
     // Success - cookies are automatically set by Supabase client

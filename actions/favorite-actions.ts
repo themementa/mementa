@@ -16,10 +16,16 @@ export async function toggleFavoriteAction(formData: FormData) {
     return;
   }
 
-  await toggleFavorite({
-    userId: user.id,
-    quoteId,
-  });
+  try {
+    await toggleFavorite({
+      userId: user.id,
+      quoteId,
+    });
+  } catch (error) {
+    console.error("[toggleFavoriteAction] Error toggling favorite:", error);
+    // Re-throw to let the UI handle the error gracefully
+    throw error;
+  }
 }
 
 

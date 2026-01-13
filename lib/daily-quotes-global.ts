@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { SYSTEM_USER_ID } from "@/lib/constants";
 import type { Quote } from "@/lib/quotes";
 
 /**
@@ -45,16 +46,20 @@ export async function getUsedQuoteIds(): Promise<string[]> {
 
 /**
  * Set today's quote in daily_quotes table
+ * If today's quote already exists, it will be updated (upsert behavior)
  */
 export async function setTodaysQuote(quoteId: string): Promise<void> {
   const supabase = createSupabaseServerClient();
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
+  // Use upsert to handle both insert and update cases
   const { error } = await supabase
     .from("daily_quotes")
-    .insert({
+    .upsert({
       date: today,
       quote_id: quoteId,
+    }, {
+      onConflict: "date"
     });
 
   if (error) {
@@ -64,7 +69,9 @@ export async function setTodaysQuote(quoteId: string): Promise<void> {
 
 /**
  * Get today's global quote
- * Returns a quote that hasn't been used yet, or any quote if all have been used
+ * Always prioritizes system quotes (SYSTEM_USER_ID)
+ * Returns a system quote that hasn't been used yet, or any system quote if all have been used
+ * Never returns null if system quotes exist
  */
 export async function getTodaysGlobalQuote(): Promise<Quote | null> {
   const supabase = createSupabaseServerClient();
@@ -76,18 +83,20 @@ export async function getTodaysGlobalQuote(): Promise<Quote | null> {
       .from("quotes")
       .select("*")
       .eq("id", existingQuoteId)
+      .eq("user_id", SYSTEM_USER_ID)
       .single();
 
     if (!error && data) {
       return data as Quote;
     }
-    // If quote was deleted, continue to select a new one
+    // If quote was deleted or not a system quote, continue to select a new one
   }
 
-  // Get all quotes
+  // Get all system quotes (global quotes shared across all users)
   const { data: allQuotes, error: quotesError } = await supabase
     .from("quotes")
-    .select("*");
+    .select("*")
+    .eq("user_id", SYSTEM_USER_ID);
 
   if (quotesError) {
     console.error("[getTodaysGlobalQuote] Database error:", quotesError);
@@ -95,11 +104,11 @@ export async function getTodaysGlobalQuote(): Promise<Quote | null> {
   }
 
   if (!allQuotes || allQuotes.length === 0) {
-    console.warn("[getTodaysGlobalQuote] No quotes found in database");
+    console.warn("[getTodaysGlobalQuote] No system quotes found in database");
     return null;
   }
 
-  console.log(`[getTodaysGlobalQuote] Found ${allQuotes.length} quotes in database`);
+  console.log(`[getTodaysGlobalQuote] Found ${allQuotes.length} system quotes in database`);
 
   // Get used quote IDs
   const usedQuoteIds = await getUsedQuoteIds();
@@ -114,7 +123,7 @@ export async function getTodaysGlobalQuote(): Promise<Quote | null> {
   const quotesToChooseFrom =
     availableQuotes.length > 0 ? availableQuotes : (allQuotes as Quote[]);
 
-  // Random selection
+  // Random selection from system quotes
   const randomIndex = Math.floor(Math.random() * quotesToChooseFrom.length);
   const selectedQuote = quotesToChooseFrom[randomIndex];
 
