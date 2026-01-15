@@ -336,12 +336,9 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
   }, []);
 
   const isFavorited = favoriteIds.includes(quote.id);
-  // Display text changes based on language, but quote remains the same
-  let displayText = getQuoteDisplayText(quote, language ?? "zh-tw");
-  if (!displayText || displayText.trim() === "") {
-    // Fallback to English if current language text is empty
-    displayText = quote.cleaned_text_en || quote.original_text || "";
-  }
+  // Display text changes based on language, with fallback chain
+  // getQuoteDisplayText already handles fallback: cleaned_text_zh_tw/en/cn → cleaned_text_en → original_text
+  const displayText = getQuoteDisplayText(quote, language ?? "zh-tw");
 
   // Format today's date - minimal, elegant
   const today = new Date();

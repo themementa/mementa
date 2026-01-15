@@ -320,27 +320,39 @@ export function filterQuotesByLanguage(quotes: Array<{ cleaned_text_zh_tw: strin
 }
 
 /**
- * Get display text for a quote based on language (cleaned text only, no fallback)
- * Strict language matching: zh-tw → cleaned_text_zh_tw, zh-cn → cleaned_text_zh_cn, en → cleaned_text_en
+ * Get display text for a quote based on language with fallback
+ * Priority: cleaned_text_zh_tw/zh_cn/en → cleaned_text_en → original_text
+ * Ensures text is always displayed even if translation is missing
  */
 export function getQuoteDisplayText(
-  quote: { cleaned_text_zh_tw: string | null; cleaned_text_zh_cn: string | null; cleaned_text_en: string | null; [key: string]: any },
+  quote: { cleaned_text_zh_tw: string | null; cleaned_text_zh_cn: string | null; cleaned_text_en: string | null; original_text?: string | null; [key: string]: any },
   language: Language
 ): string {
+  let text = "";
+  
   switch (language) {
     case "zh-tw":
-      // zh-tw: cleaned_text_zh_tw only (no fallback)
-      return quote.cleaned_text_zh_tw?.trim() ?? "";
+      text = quote.cleaned_text_zh_tw?.trim() ?? "";
+      break;
     case "zh-cn":
-      // zh-cn: cleaned_text_zh_cn only (no fallback)
-      return quote.cleaned_text_zh_cn?.trim() ?? "";
+      text = quote.cleaned_text_zh_cn?.trim() ?? "";
+      break;
     case "en":
-      // en: cleaned_text_en only (no fallback)
-      return quote.cleaned_text_en?.trim() ?? "";
+      text = quote.cleaned_text_en?.trim() ?? "";
+      break;
     default:
-      // Default to zh-tw
-      return quote.cleaned_text_zh_tw?.trim() ?? "";
+      text = quote.cleaned_text_zh_tw?.trim() ?? "";
   }
+  
+  // Fallback chain: current language → English → original_text
+  if (!text) {
+    text = quote.cleaned_text_en?.trim() ?? "";
+  }
+  if (!text) {
+    text = quote.original_text?.trim() ?? "";
+  }
+  
+  return text;
 }
 
 /**

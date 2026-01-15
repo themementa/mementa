@@ -10,3 +10,4 @@ CREATE INDEX IF NOT EXISTS idx_daily_quotes_quote_id ON daily_quotes(quote_id);
 
 
 
+

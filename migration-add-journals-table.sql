@@ -56,3 +56,4 @@ CREATE TRIGGER update_journals_updated_at BEFORE UPDATE ON journals
 
 
 
+

@@ -17,3 +17,4 @@ ADD COLUMN IF NOT EXISTS cleaned_text_en TEXT;
 
 
 
+

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureUserQuotesSeeded } from "@/lib/user-quotes-seed";
 import type { Quote } from "@/lib/quotes";
 
 export type Favorite = {
@@ -15,19 +16,22 @@ export async function addFavorite(params: {
 }): Promise<Favorite> {
   const supabase = createSupabaseServerClient();
   
-  // Verify quote exists (system or user's personal quote)
-  // This allows favoriting system quotes without ownership check
+  // Ensure user quotes are seeded before favoriting
+  await ensureUserQuotesSeeded(params.userId);
+  
+  // Verify quote exists and belongs to user
   const { data: quoteData, error: quoteError } = await supabase
     .from("quotes")
     .select("id")
     .eq("id", params.quoteId)
+    .eq("user_id", params.userId)
     .maybeSingle();
   
   if (quoteError || !quoteData) {
-    throw new Error(`Quote not found: ${params.quoteId}`);
+    throw new Error(`Quote not found or does not belong to user: ${params.quoteId}`);
   }
   
-  // Insert favorite - allows favoriting any quote (system or personal)
+  // Insert favorite - only references user's own quotes
   const { data, error } = await supabase
     .from("favorites")
     .insert({

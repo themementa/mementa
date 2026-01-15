@@ -1,28 +1,30 @@
 "use server";
 
-import { getTodaysGlobalQuote } from "@/lib/daily-quotes-global";
+import { getTodaysUserQuote } from "@/lib/daily-quotes-global";
+import { getCurrentUser } from "@/lib/auth";
 import { ensureQuotesSeeded } from "@/lib/seed-quotes";
 import type { Quote } from "@/lib/quotes";
 
 /**
- * Get today's global quote (same for all users)
- * Always prioritizes system quotes (SYSTEM_USER_ID)
- * Randomly picks one system quote if available
- * Never returns null if system quotes exist
+ * Get today's quote for the current user
+ * Always queries from user's own seeded quotes
+ * If no quote found, automatically triggers seed then retries
+ * Never returns null if user quotes exist
  * 
- * Note: This is a global/public quote, not user-specific.
- * Authentication is handled at the page level (protected route),
- * but the quote data itself does not depend on userId.
- * 
- * Returns null only if no system quotes exist in database.
+ * Returns null only if no user quotes exist after seeding.
  */
 export async function getTodaysQuoteAction(): Promise<Quote | null> {
-  // Ensure system quotes are seeded before fetching
+  // Ensure system master quotes exist (source for user seeding)
   await ensureQuotesSeeded();
 
-  // getTodaysGlobalQuote always prioritizes system quotes
-  // and never returns null if system quotes exist
-  const todaysQuote = await getTodaysGlobalQuote();
+  // Get current user
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error("User must be authenticated to get today's quote");
+  }
+
+  // getTodaysUserQuote ensures user quotes are seeded and queries from user's quotes
+  const todaysQuote = await getTodaysUserQuote(user.id);
 
   return todaysQuote;
 }

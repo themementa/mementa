@@ -156,3 +156,4 @@ export const config = {
 2. **考慮優化：** 移除 `ProtectedLayout` 中的 `requireUser()`（因為 middleware 已經處理）
 3. **驗證：** 使用最小驗證方案確認問題來源
 
+

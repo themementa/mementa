@@ -1,21 +1,24 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureQuotesSeeded } from "@/lib/seed-quotes";
+import { ensureUserQuotesSeeded } from "@/lib/user-quotes-seed";
 
 /**
  * Initialize default data for a new user
- * - Ensures system quotes exist (shared globally)
+ * - Ensures system master quotes exist (shared globally as source)
+ * - Seeds user's personal quotes from system master
  * - Creates default user settings in user_metadata
- * - Does NOT insert user-specific quotes (users share system quotes)
  * 
  * This function is idempotent - safe to call multiple times.
- * It only ensures system quotes are seeded and user settings exist.
  */
 export async function initializeUserData(userId: string): Promise<void> {
   try {
     console.log(`[initializeUserData] Initializing data for user ${userId}...`);
     
-    // Ensure system quotes are seeded (idempotent - only seeds if not already present)
+    // Ensure system master quotes exist (idempotent - only seeds if not already present)
     await ensureQuotesSeeded();
+    
+    // Seed user's personal quotes from system master (idempotent)
+    await ensureUserQuotesSeeded(userId);
     
     // Initialize user settings in user_metadata (idempotent)
     const supabase = createSupabaseServerClient();

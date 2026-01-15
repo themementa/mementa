@@ -36,3 +36,4 @@ CREATE POLICY "Users can insert their own daily quotes"
 
 
 
+

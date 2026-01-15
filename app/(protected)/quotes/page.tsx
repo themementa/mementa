@@ -8,11 +8,11 @@ import { QuotesPage } from "@/components/pages/quotes-page";
  * Quotes Page Server Component
  * 
  * Data Flow:
- * - getAllQuotes(): GLOBAL quote library (not user-specific)
+ * - getAllQuotes(): User's personal quote library (seeded from system master)
  * - getFavoriteQuoteIdsForUser(): User-specific favorites (for display state only)
  * 
- * Note: Authentication is required to access this page (protected route),
- * but the quote library itself is global and does not depend on userId.
+ * Note: Authentication is required to access this page (protected route).
+ * getAllQuotes ensures user quotes are seeded before returning.
  */
 export default async function QuotesPageServer() {
   // Authentication is required to access this page (protected route)
@@ -23,10 +23,10 @@ export default async function QuotesPageServer() {
     throw new Error("Unauthorized");
   }
   
-  // Ensure quotes are seeded on first visit (idempotent - safe to call multiple times)
+  // Ensure system master quotes exist (source for user seeding)
   await ensureQuotesSeeded();
   
-  // Get all quotes (GLOBAL - same for all users, from all quotes in database)
+  // Get all user quotes (getAllQuotes ensures seeding before returning)
   let quotes: Quote[] = [];
   try {
     quotes = await getAllQuotes();
