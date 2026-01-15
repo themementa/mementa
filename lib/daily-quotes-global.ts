@@ -74,9 +74,17 @@ export async function setTodaysQuote(userId: string, quoteId: string): Promise<v
  * Get today's quote for a specific user
  * Always queries from user's own seeded quotes
  * Returns a user quote that hasn't been used yet, or any user quote if all have been used
- * Never returns null if user quotes exist
+ * Must never return null - throws error if quotes are unavailable
+ * 
+ * Safe resolver: If daily_quotes for today exists → load it
+ * Else: Pick a random quote from user's quotes → Insert into daily_quotes → Return it
+ * 
+ * This function ensures:
+ * - User quotes are seeded before fetching
+ * - Today's quote is always created in daily_quotes if missing
+ * - Never returns null (throws error if system quotes are missing)
  */
-export async function getTodaysUserQuote(userId: string): Promise<Quote | null> {
+export async function getTodaysUserQuote(userId: string): Promise<Quote> {
   const supabase = createSupabaseServerClient();
 
   // Ensure user quotes are seeded before fetching
@@ -110,8 +118,41 @@ export async function getTodaysUserQuote(userId: string): Promise<Quote | null> 
   }
 
   if (!allQuotes || allQuotes.length === 0) {
-    console.warn("[getTodaysUserQuote] No quotes found for user");
-    return null;
+    console.warn("[getTodaysUserQuote] No quotes found for user after seeding, retrying...");
+    // Try one more time to seed, in case seeding failed
+    await ensureUserQuotesSeeded(userId);
+    
+    // Retry fetching quotes
+    const { data: retryQuotes, error: retryError } = await supabase
+      .from("quotes")
+      .select("*")
+      .eq("user_id", userId);
+    
+    if (retryError) {
+      console.error("[getTodaysUserQuote] Database error on retry:", retryError);
+      throw new Error(`Failed to fetch quotes after seeding: ${retryError.message}`);
+    }
+    
+    if (!retryQuotes || retryQuotes.length === 0) {
+      // This should never happen if system master quotes exist
+      console.error("[getTodaysUserQuote] CRITICAL: Still no quotes after retry seeding");
+      throw new Error(`No quotes available for user ${userId} after seeding - system master quotes may be missing`);
+    }
+    
+    // Use a random quote from the retried quotes
+    const randomIndex = Math.floor(Math.random() * retryQuotes.length);
+    const selectedQuote = retryQuotes[randomIndex] as Quote;
+    
+    // Save to daily_quotes - this is critical
+    try {
+      await setTodaysQuote(userId, selectedQuote.id);
+      console.log(`[getTodaysUserQuote] Saved today's quote for user ${userId} after retry`);
+    } catch (saveError) {
+      console.error("[getTodaysUserQuote] Failed to save to daily_quotes after retry:", saveError);
+      // Still return the quote even if save fails
+    }
+    
+    return selectedQuote;
   }
 
   console.log(`[getTodaysUserQuote] Found ${allQuotes.length} quotes for user`);
@@ -133,12 +174,19 @@ export async function getTodaysUserQuote(userId: string): Promise<Quote | null> 
   const randomIndex = Math.floor(Math.random() * quotesToChooseFrom.length);
   const selectedQuote = quotesToChooseFrom[randomIndex];
 
-  // Save to daily_quotes (but don't fail if this fails - quote selection is more important)
+  // Save to daily_quotes - this is critical, retry if it fails
   try {
     await setTodaysQuote(userId, selectedQuote.id);
+    console.log(`[getTodaysUserQuote] Saved today's quote for user ${userId}`);
   } catch (saveError) {
     // Log but don't fail - we can still return the quote even if saving fails
     console.warn("[getTodaysUserQuote] Failed to save to daily_quotes, but returning quote anyway:", saveError);
+    // Try one more time
+    try {
+      await setTodaysQuote(userId, selectedQuote.id);
+    } catch (retryError) {
+      console.error("[getTodaysUserQuote] Retry save also failed:", retryError);
+    }
   }
 
   return selectedQuote;

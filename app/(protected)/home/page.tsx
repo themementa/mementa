@@ -2,7 +2,9 @@ import { requireUser } from "@/lib/auth";
 import { getFavoriteQuoteIdsForUser } from "@/lib/favorites";
 import { getTodaysQuoteAction } from "@/actions/daily-quote-actions";
 import { ensureQuotesSeeded } from "@/lib/seed-quotes";
+import { backfillUserData } from "@/lib/user-backfill";
 import { TodaysQuoteDisplay } from "@/components/quotes/todays-quote-display";
+import type { Quote } from "@/lib/quotes";
 
 /**
  * Next.js 14 App Router: Dynamic route configuration
@@ -44,13 +46,27 @@ export default async function HomePage(): Promise<JSX.Element> {
       throw new Error("Unauthorized");
     }
     
-    // Ensure quotes are seeded on first visit (idempotent - safe to call multiple times)
+    // Ensure system master quotes exist (idempotent)
     await ensureQuotesSeeded();
     
-    // Get today's quote (GLOBAL - same for all users, from all quotes)
-    // This does NOT depend on userId or user's favorites
-    // getTodaysQuoteAction now returns null if no quote is available (no Intro fallback)
-    const todaysQuote = await getTodaysQuoteAction();
+    // Backfill user data (idempotent - fixes inconsistent data for existing users)
+    // This ensures:
+    // - User has enough quotes (seeds if < threshold)
+    // - Today's quote exists in daily_quotes
+    await backfillUserData(user.id);
+    
+    // Get today's quote (user-specific, from user's own quotes)
+    // getTodaysQuoteAction ensures user quotes are seeded and creates daily_quotes if needed
+    // Must never return null - throws error if quotes are unavailable
+    let todaysQuote: Quote | null = null;
+    try {
+      todaysQuote = await getTodaysQuoteAction();
+    } catch (quoteError) {
+      // If quote fetch fails, log error but show empty state
+      // This should never happen if initialization worked correctly
+      console.error("[HomePage] Failed to get today's quote:", quoteError);
+      // todaysQuote remains null, will show empty state
+    }
     
     // Get favorite IDs separately (only for display state - to show if quote is favorited)
     // This is user-specific but does not affect quote selection
@@ -65,13 +81,15 @@ export default async function HomePage(): Promise<JSX.Element> {
     }
 
     // focusMoment is handled client-side via localStorage in TodaysQuoteDisplay component
-    // TodaysQuoteDisplay will handle null quote by showing empty state
+    // TodaysQuoteDisplay will handle null quote by showing safe "no quote" placeholder
+    // This should never happen after fix, but we handle it gracefully
     return <TodaysQuoteDisplay quote={todaysQuote} favoriteIds={favoriteIds} />;
   } catch (error) {
     console.error("[HomePage] 錯誤:", error);
     
     // For auth errors, redirect is handled by requireUser() in layout
     // For other errors, show empty state via TodaysQuoteDisplay with null quote
+    // This is a safe fallback - should never happen after fix
     return <TodaysQuoteDisplay quote={null} favoriteIds={[]} />;
   }
 }

@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { getAllQuotes, getFirstAvailableQuote, type Quote } from "@/lib/quotes";
 import { getFavoriteQuoteIdsForUser } from "@/lib/favorites";
 import { ensureQuotesSeeded } from "@/lib/seed-quotes";
+import { backfillUserData } from "@/lib/user-backfill";
 import { QuotesPage } from "@/components/pages/quotes-page";
 
 /**
@@ -25,6 +26,9 @@ export default async function QuotesPageServer() {
   
   // Ensure system master quotes exist (source for user seeding)
   await ensureQuotesSeeded();
+  
+  // Backfill user data (idempotent - fixes inconsistent data for existing users)
+  await backfillUserData(user.id);
   
   // Get all user quotes (getAllQuotes ensures seeding before returning)
   let quotes: Quote[] = [];

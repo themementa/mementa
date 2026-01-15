@@ -6,7 +6,7 @@ import type { Quote } from "@/lib/quotes";
  * Minimum threshold for user quotes count
  * If user has fewer quotes than this, trigger seeding
  */
-const MIN_USER_QUOTES_THRESHOLD = 1000;
+const MIN_USER_QUOTES_THRESHOLD = 100;
 
 /**
  * Count how many quotes exist for a specific user

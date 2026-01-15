@@ -9,11 +9,11 @@ import type { Quote } from "@/lib/quotes";
  * Get today's quote for the current user
  * Always queries from user's own seeded quotes
  * If no quote found, automatically triggers seed then retries
- * Never returns null if user quotes exist
+ * Must never return null - throws error if quotes are unavailable
  * 
- * Returns null only if no user quotes exist after seeding.
+ * This ensures every user always has a Today's Quote.
  */
-export async function getTodaysQuoteAction(): Promise<Quote | null> {
+export async function getTodaysQuoteAction(): Promise<Quote> {
   // Ensure system master quotes exist (source for user seeding)
   await ensureQuotesSeeded();
 

@@ -57,17 +57,17 @@ export async function POST(request: Request) {
       console.log("[POST /api/auth/signup] Profile created for user:", signUpData.user.id);
     }
 
-    // Initialize user data in background (don't await - non-blocking)
-    import("@/lib/user-init").then(({ initializeUserData }) => {
-      initializeUserData(signUpData.user!.id).catch((initError) => {
-        // Log but don't fail signup - initialization is best effort
-        console.error("[POST /api/auth/signup] Background initialization failed:", initError);
-      });
-    }).catch((importError) => {
-      console.error("[POST /api/auth/signup] Failed to import user-init:", importError);
-    });
+    // Initialize user data - await to ensure seeding completes before redirect
+    // This ensures new users have quotes and today's quote ready
+    try {
+      await initializeUserData(signUpData.user.id);
+      console.log("[POST /api/auth/signup] User data initialization completed for:", signUpData.user.id);
+    } catch (initError) {
+      // Log but don't fail signup - initialization errors are logged but don't block
+      console.error("[POST /api/auth/signup] User data initialization failed (non-blocking):", initError);
+    }
 
-    // Return success immediately - frontend will redirect to /login
+    // Return success - frontend will redirect to /login
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[POST /api/auth/signup] 未預期的錯誤:", error);

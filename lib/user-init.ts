@@ -1,14 +1,19 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureQuotesSeeded } from "@/lib/seed-quotes";
 import { ensureUserQuotesSeeded } from "@/lib/user-quotes-seed";
+import { getTodaysUserQuote } from "@/lib/daily-quotes-global";
 
 /**
- * Initialize default data for a new user
- * - Ensures system master quotes exist (shared globally as source)
- * - Seeds user's personal quotes from system master
- * - Creates default user settings in user_metadata
+ * Unified user initialization function
+ * Responsibilities:
+ * - If user has < 100 quotes → seed full master quotes into quotes table
+ * - If daily_quotes has no row for today → create one by picking random quote from user's quotes
+ * - Must be idempotent and safe to call multiple times
  * 
- * This function is idempotent - safe to call multiple times.
+ * This function ensures:
+ * 1. Every user always has a full quotes collection seeded
+ * 2. Every user always has a Today's Quote record in daily_quotes
+ * 3. Existing users with broken or partial data are auto-repaired
  */
 export async function initializeUserData(userId: string): Promise<void> {
   try {
@@ -18,7 +23,20 @@ export async function initializeUserData(userId: string): Promise<void> {
     await ensureQuotesSeeded();
     
     // Seed user's personal quotes from system master (idempotent)
+    // This checks if user has < 100 quotes and seeds if needed
     await ensureUserQuotesSeeded(userId);
+    
+    // Ensure today's quote exists in daily_quotes (idempotent)
+    // This will create a daily_quotes entry if it doesn't exist
+    // Must never return null - if no quotes exist, it will seed and retry
+    const todaysQuote = await getTodaysUserQuote(userId);
+    if (todaysQuote) {
+      console.log(`[initializeUserData] Today's quote ensured for user ${userId}`);
+    } else {
+      // This should never happen if seeding worked correctly
+      console.error(`[initializeUserData] CRITICAL: Could not create today's quote for user ${userId} - no quotes available after seeding`);
+      throw new Error(`Failed to ensure today's quote for user ${userId} - no quotes available`);
+    }
     
     // Initialize user settings in user_metadata (idempotent)
     const supabase = createSupabaseServerClient();

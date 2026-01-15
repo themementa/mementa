@@ -16,6 +16,11 @@ export async function addFavorite(params: {
 }): Promise<Favorite> {
   const supabase = createSupabaseServerClient();
   
+  // Validate inputs
+  if (!params.userId || !params.quoteId) {
+    throw new Error("User ID and Quote ID are required");
+  }
+  
   // Ensure user quotes are seeded before favoriting
   await ensureUserQuotesSeeded(params.userId);
   
@@ -27,8 +32,35 @@ export async function addFavorite(params: {
     .eq("user_id", params.userId)
     .maybeSingle();
   
-  if (quoteError || !quoteData) {
+  if (quoteError) {
+    console.error("[addFavorite] Error checking quote:", quoteError);
+    throw new Error(`Failed to verify quote: ${quoteError.message}`);
+  }
+  
+  if (!quoteData) {
     throw new Error(`Quote not found or does not belong to user: ${params.quoteId}`);
+  }
+  
+  // Check if favorite already exists (prevent duplicates)
+  const existingFavorite = await checkFavoriteExists({
+    userId: params.userId,
+    quoteId: params.quoteId,
+  });
+  
+  if (existingFavorite) {
+    // Return existing favorite instead of error (idempotent behavior)
+    const { data: existingData, error: fetchError } = await supabase
+      .from("favorites")
+      .select("*")
+      .eq("user_id", params.userId)
+      .eq("quote_id", params.quoteId)
+      .single();
+    
+    if (fetchError || !existingData) {
+      throw new Error(`Favorite exists but could not be retrieved: ${fetchError?.message || "Unknown error"}`);
+    }
+    
+    return existingData as Favorite;
   }
   
   // Insert favorite - only references user's own quotes
@@ -42,8 +74,29 @@ export async function addFavorite(params: {
     .single();
 
   if (error) {
+    // Handle duplicate key error gracefully
+    if (error.code === "23505") {
+      // Duplicate detected, fetch existing
+      const { data: existingData, error: fetchError } = await supabase
+        .from("favorites")
+        .select("*")
+        .eq("user_id", params.userId)
+        .eq("quote_id", params.quoteId)
+        .single();
+      
+      if (fetchError || !existingData) {
+        throw new Error(`Duplicate favorite detected but could not be retrieved: ${fetchError?.message || "Unknown error"}`);
+      }
+      
+      return existingData as Favorite;
+    }
+    
     console.error("[addFavorite] Error adding favorite:", error);
-    throw new Error(error.message);
+    throw new Error(`Failed to add favorite: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("Favorite was not created");
   }
 
   return data as Favorite;
