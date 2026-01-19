@@ -1,4 +1,4 @@
--- Migration: 新增 daily_quotes 表來記錄每個用戶每天的今日金句
+-- Migration: 新增 daily_quotes 表來記錄每個使用者每天的今日金句
 -- 
 -- 使用方法：
 -- 1. 登入 Supabase Dashboard (https://app.supabase.com)

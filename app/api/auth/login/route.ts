@@ -40,17 +40,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Initialize user data on login (idempotent - safe for existing users)
-    // This ensures:
-    // - User has quotes seeded (backfill for existing users)
-    // - Today's quote exists in daily_quotes
+    // Initialize user data on login for visibility
     if (authData.user) {
       try {
-        await initializeUserData(authData.user.id);
-        console.log("[POST /api/auth/login] User data initialization completed for:", authData.user.id);
-      } catch (initError) {
-        // Log but don't fail login - initialization is best effort
-        console.error("[POST /api/auth/login] Failed to initialize user data:", initError);
+        await initializeUserData(authData.user.id, { source: "login" });
+        console.log("LOGIN INIT FINISHED", authData.user.id);
+      } catch (error) {
+        console.error("LOGIN INIT FAILED", authData.user.id, error);
+        throw error;
       }
     }
 

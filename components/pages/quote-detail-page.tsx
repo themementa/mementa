@@ -30,7 +30,14 @@ export function QuoteDetailPage({ quote, isFavorited }: QuoteDetailPageProps) {
         {/* Quote Display Block - 樣式 B：內容主體字 */}
         <div className="rounded-2xl bg-white/90 backdrop-blur-sm border border-soft-pink-dark/20 shadow-sm p-6 md:p-8">
           <blockquote className="text-xl md:text-2xl lg:text-3xl text-center text-neutral-800 text-content-tone">
-            {mounted ? displayText : (quote.cleaned_text_zh_tw || quote.cleaned_text_en || quote.original_text || "")}
+            {mounted
+              ? displayText
+              : (quote.cleaned_text_zh_tw ||
+                  quote.cleaned_text_zh_cn ||
+                  quote.cleaned_text_zh_hans ||
+                  quote.cleaned_text_en ||
+                  quote.original_text ||
+                  "")}
           </blockquote>
         </div>
 

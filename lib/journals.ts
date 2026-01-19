@@ -112,7 +112,65 @@ export async function saveJournalEntry(params: {
       throw new Error(error.message);
     }
 
+    try {
+      await ensureTomorrowDailyQuote();
+    } catch (dailyQuoteError) {
+      console.warn("[saveJournalEntry] Failed to ensure tomorrow's daily quote:", dailyQuoteError);
+    }
+
     return data as Journal;
+  }
+}
+
+async function ensureTomorrowDailyQuote(): Promise<void> {
+  const supabase = createSupabaseServerClient();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowDate = tomorrow.toISOString().split("T")[0];
+
+  const { data: existing, error: existingError } = await supabase
+    .from("daily_quotes")
+    .select("quote_id")
+    .eq("date", tomorrowDate)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  if (existing?.quote_id) {
+    return;
+  }
+
+  const { data: systemQuotes, error: systemQuotesError } = await supabase
+    .from("system_quotes")
+    .select("id");
+
+  if (systemQuotesError) {
+    throw new Error(systemQuotesError.message);
+  }
+
+  if (!systemQuotes || systemQuotes.length === 0) {
+    throw new Error("No system quotes available");
+  }
+
+  const randomIndex = Math.floor(Math.random() * systemQuotes.length);
+  const quoteId = systemQuotes[randomIndex].id;
+
+  const { error: insertError } = await supabase
+    .from("daily_quotes")
+    .upsert(
+      {
+        date: tomorrowDate,
+        quote_id: quoteId,
+      },
+      {
+        onConflict: "date",
+      }
+    );
+
+  if (insertError) {
+    throw new Error(insertError.message);
   }
 }
 

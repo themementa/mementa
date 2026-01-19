@@ -1,13 +1,13 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
-import { ensureUserQuotesSeeded } from "@/lib/user-quotes-seed";
 
 export type Quote = {
   id: string;
-  user_id: string | null;
+  user_id: string;
   original_text: string;
   cleaned_text_zh_tw: string | null;
   cleaned_text_zh_cn: string | null;
+  cleaned_text_zh_hans: string | null;
   cleaned_text_en: string | null;
   created_at: string;
   updated_at: string;
@@ -16,15 +16,11 @@ export type Quote = {
 export async function getAllQuotes(): Promise<Quote[]> {
   const supabase = createSupabaseServerClient();
   const user = await getCurrentUser();
-  
+
   if (!user) {
     throw new Error("User must be authenticated to get quotes");
   }
-
-  // Ensure user quotes are seeded before fetching
-  await ensureUserQuotesSeeded(user.id);
   
-  // Only fetch user's personal quotes (no system quotes)
   const { data, error } = await supabase
     .from("quotes")
     .select("*")
@@ -39,9 +35,9 @@ export async function getAllQuotes(): Promise<Quote[]> {
   // Log actual data count for debugging
   const count = data?.length ?? 0;
   if (count === 0) {
-    console.warn("[getAllQuotes] No quotes found for user");
+    console.warn("[getAllQuotes] No system quotes found");
   } else {
-    console.log(`[getAllQuotes] Found ${count} quotes for user`);
+    console.log(`[getAllQuotes] Found ${count} system quotes`);
   }
 
   return (data ?? []) as Quote[];
@@ -50,12 +46,11 @@ export async function getAllQuotes(): Promise<Quote[]> {
 export async function getQuoteById(id: string): Promise<Quote | null> {
   const supabase = createSupabaseServerClient();
   const user = await getCurrentUser();
-  
+
   if (!user) {
     throw new Error("User must be authenticated to get quote");
   }
 
-  // Only fetch user's personal quotes
   const { data, error } = await supabase
     .from("quotes")
     .select("*")
@@ -82,15 +77,11 @@ export async function getQuoteById(id: string): Promise<Quote | null> {
 export async function getFirstAvailableQuote(): Promise<Quote | null> {
   const supabase = createSupabaseServerClient();
   const user = await getCurrentUser();
-  
+
   if (!user) {
     return null;
   }
-
-  // Ensure user quotes are seeded before fetching
-  await ensureUserQuotesSeeded(user.id);
   
-  // Only fetch user's personal quotes
   const { data, error } = await supabase
     .from("quotes")
     .select("*")

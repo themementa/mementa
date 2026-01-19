@@ -325,17 +325,27 @@ export function filterQuotesByLanguage(quotes: Array<{ cleaned_text_zh_tw: strin
  * Ensures text is always displayed even if translation is missing
  */
 export function getQuoteDisplayText(
-  quote: { cleaned_text_zh_tw: string | null; cleaned_text_zh_cn: string | null; cleaned_text_en: string | null; original_text?: string | null; [key: string]: any },
+  quote: {
+    cleaned_text_zh_tw: string | null;
+    cleaned_text_zh_cn: string | null;
+    cleaned_text_zh_hans?: string | null;
+    cleaned_text_en: string | null;
+    original_text?: string | null;
+    [key: string]: any;
+  },
   language: Language
 ): string {
   let text = "";
-  
+
   switch (language) {
     case "zh-tw":
       text = quote.cleaned_text_zh_tw?.trim() ?? "";
       break;
     case "zh-cn":
       text = quote.cleaned_text_zh_cn?.trim() ?? "";
+      if (!text) {
+        text = quote.cleaned_text_zh_hans?.trim() ?? "";
+      }
       break;
     case "en":
       text = quote.cleaned_text_en?.trim() ?? "";
@@ -343,15 +353,24 @@ export function getQuoteDisplayText(
     default:
       text = quote.cleaned_text_zh_tw?.trim() ?? "";
   }
-  
-  // Fallback chain: current language → English → original_text
+
+  // Fallback chain: zh_tw/zh_cn/zh_hans → en → original_text
+  if (!text) {
+    text = quote.cleaned_text_zh_tw?.trim() ?? "";
+  }
+  if (!text) {
+    text = quote.cleaned_text_zh_cn?.trim() ?? "";
+  }
+  if (!text) {
+    text = quote.cleaned_text_zh_hans?.trim() ?? "";
+  }
   if (!text) {
     text = quote.cleaned_text_en?.trim() ?? "";
   }
   if (!text) {
     text = quote.original_text?.trim() ?? "";
   }
-  
+
   return text;
 }
 

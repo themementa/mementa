@@ -93,19 +93,6 @@ export async function signUpWithEmailPassword(formData: FormData) {
 
     console.log("[signUpWithEmailPassword] signUp 成功，user:", signUpData.user?.id);
 
-    // Initialize user data in background (don't await - non-blocking)
-    if (signUpData.user) {
-      // Fire and forget - runs in background without blocking response
-      import("@/lib/user-init").then(({ initializeUserData }) => {
-        initializeUserData(signUpData.user!.id).catch((initError) => {
-          // Log but don't fail signup - initialization is best effort
-          console.error("[signUpWithEmailPassword] Background initialization failed:", initError);
-        });
-      }).catch((importError) => {
-        console.error("[signUpWithEmailPassword] Failed to import user-init:", importError);
-      });
-    }
-
     // Return success immediately - frontend will redirect to /login
     return { success: true };
   } catch (error) {

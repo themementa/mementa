@@ -1,8 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { getFavoriteQuoteIdsForUser } from "@/lib/favorites";
 import { getTodaysQuoteAction } from "@/actions/daily-quote-actions";
-import { ensureQuotesSeeded } from "@/lib/seed-quotes";
-import { backfillUserData } from "@/lib/user-backfill";
 import { TodaysQuoteDisplay } from "@/components/quotes/todays-quote-display";
 import type { Quote } from "@/lib/quotes";
 
@@ -46,17 +44,8 @@ export default async function HomePage(): Promise<JSX.Element> {
       throw new Error("Unauthorized");
     }
     
-    // Ensure system master quotes exist (idempotent)
-    await ensureQuotesSeeded();
-    
-    // Backfill user data (idempotent - fixes inconsistent data for existing users)
-    // This ensures:
-    // - User has enough quotes (seeds if < threshold)
-    // - Today's quote exists in daily_quotes
-    await backfillUserData(user.id);
-    
-    // Get today's quote (user-specific, from user's own quotes)
-    // getTodaysQuoteAction ensures user quotes are seeded and creates daily_quotes if needed
+    // Get today's GLOBAL quote (shared by all users)
+    // getTodaysQuoteAction ensures daily_quotes is created if needed
     // Must never return null - throws error if quotes are unavailable
     let todaysQuote: Quote | null = null;
     try {

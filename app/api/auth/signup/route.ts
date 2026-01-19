@@ -58,13 +58,12 @@ export async function POST(request: Request) {
     }
 
     // Initialize user data - await to ensure seeding completes before redirect
-    // This ensures new users have quotes and today's quote ready
     try {
-      await initializeUserData(signUpData.user.id);
-      console.log("[POST /api/auth/signup] User data initialization completed for:", signUpData.user.id);
-    } catch (initError) {
-      // Log but don't fail signup - initialization errors are logged but don't block
-      console.error("[POST /api/auth/signup] User data initialization failed (non-blocking):", initError);
+      await initializeUserData(signUpData.user.id, { source: "signup" });
+      console.log("SIGNUP INIT FINISHED", signUpData.user.id);
+    } catch (error) {
+      console.error("SIGNUP INIT FAILED", signUpData.user.id, error);
+      throw error;
     }
 
     // Return success - frontend will redirect to /login

@@ -1,6 +1,6 @@
 /**
  * 繁簡轉換腳本
- * 將所有 quotes 的 cleaned_text（繁體）轉換為簡體並填入 cleaned_text_zh_cn
+ * 將所有 system_quotes 的 cleaned_text_zh_tw（繁體）轉換為簡體並填入 cleaned_text_zh_cn
  * 
  * 使用方法：
  * 1. 安裝依賴：npm install opencc
@@ -26,14 +26,14 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function convertQuotesToSimplified() {
-  console.log("開始轉換 quotes 為簡體中文...\n");
+  console.log("開始轉換 system_quotes 為簡體中文...\n");
 
   try {
-    // 1. 獲取所有需要轉換的 quotes（cleaned_text 不為空，且 cleaned_text_zh_cn 為空）
+    // 1. 獲取所有需要轉換的 system_quotes（cleaned_text_zh_tw 不為空，且 cleaned_text_zh_cn 為空）
     const { data: quotes, error: fetchError } = await supabase
-      .from("quotes")
-      .select("id, cleaned_text, cleaned_text_zh_cn")
-      .not("cleaned_text", "is", null)
+      .from("system_quotes")
+      .select("id, cleaned_text_zh_tw, cleaned_text_zh_cn")
+      .not("cleaned_text_zh_tw", "is", null)
       .or("cleaned_text_zh_cn.is.null,cleaned_text_zh_cn.eq.");
 
     if (fetchError) {
@@ -47,7 +47,7 @@ async function convertQuotesToSimplified() {
 
     // 過濾出需要轉換的 quotes（cleaned_text_zh_cn 為空或 null）
     const quotesToConvert = quotes.filter(
-      (q) => q.cleaned_text && (!q.cleaned_text_zh_cn || q.cleaned_text_zh_cn.trim() === "")
+      (q) => q.cleaned_text_zh_tw && (!q.cleaned_text_zh_cn || q.cleaned_text_zh_cn.trim() === "")
     );
 
     console.log(`找到 ${quotesToConvert.length} 條 quotes 需要處理（總共 ${quotes.length} 條）\n`);
@@ -59,18 +59,18 @@ async function convertQuotesToSimplified() {
 
     for (const quote of quotesToConvert) {
       try {
-        if (!quote.cleaned_text) {
-          console.log(`[跳過] Quote ${quote.id}: cleaned_text 為空`);
+        if (!quote.cleaned_text_zh_tw) {
+          console.log(`[跳過] Quote ${quote.id}: cleaned_text_zh_tw 為空`);
           skipCount++;
           continue;
         }
 
         // 轉換繁體為簡體
-        const simplifiedText = converter(quote.cleaned_text);
+        const simplifiedText = converter(quote.cleaned_text_zh_tw);
 
         // 更新資料庫
         const { error: updateError } = await supabase
-          .from("quotes")
+          .from("system_quotes")
           .update({ cleaned_text_zh_cn: simplifiedText })
           .eq("id", quote.id);
 
@@ -78,7 +78,7 @@ async function convertQuotesToSimplified() {
           throw new Error(updateError.message);
         }
 
-        const preview = quote.cleaned_text.length > 30 ? quote.cleaned_text.substring(0, 30) + "..." : quote.cleaned_text;
+        const preview = quote.cleaned_text_zh_tw.length > 30 ? quote.cleaned_text_zh_tw.substring(0, 30) + "..." : quote.cleaned_text_zh_tw;
         const simplifiedPreview = simplifiedText.length > 30 ? simplifiedText.substring(0, 30) + "..." : simplifiedText;
         console.log(`[成功] Quote ${quote.id}: ${preview} → ${simplifiedPreview}`);
         successCount++;
