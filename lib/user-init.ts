@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getTodaysUserQuote } from "@/lib/daily-quotes-global";
+import { seedSystemQuotes } from "@/lib/seed-system-quotes";
 
 const MIN_QUOTES_REQUIRED = 300;
 const SEED_BATCH_SIZE = 200;
@@ -21,6 +22,7 @@ export async function initializeUserData(
       console.log("SIGNUP INIT START", userId);
     }
 
+    await seedSystemQuotes();
     await seedUserQuotes(userId);
     console.log("SEED QUOTES DONE", userId);
     if (options.source === "login") {
