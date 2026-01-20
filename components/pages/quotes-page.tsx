@@ -14,11 +14,12 @@ type QuotesPageProps = {
 // This is a temporary fallback until data fetching is guaranteed
 const FALLBACK_QUOTE: Quote = {
   id: "fallback-quote",
-  user_id: null,
+  user_id: "",
   original_text: "Take a moment. You're here.",
   cleaned_text_en: "Take a moment. You're here.",
   cleaned_text_zh_tw: "停一停，你在這裡。",
   cleaned_text_zh_cn: "停一停，你在这里。",
+  cleaned_text_zh_hans: "",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
