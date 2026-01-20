@@ -36,11 +36,11 @@ function getDisplayText(quote: Quote, language: Language): string {
 // 預設金句（如果用戶沒有收藏）
 const DEFAULT_QUOTE: Quote = {
   id: "default",
-  user_id: null,
+  user_id: "",
   original_text: "「成功不是終點，失敗也不是致命的，繼續前進的勇氣才是最重要的。」",
   cleaned_text_zh_tw: "成功不是終點，失敗也不是致命的，繼續前進的勇氣才是最重要的。",
-  cleaned_text_zh_cn: null,
-  cleaned_text_en: null,
+  cleaned_text_zh_cn: "",
+  cleaned_text_en: "",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString()
 };
