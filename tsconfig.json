@@ -17,11 +17,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": [
-      "node",
-      "react/experimental",
-      "react-dom/experimental"
-    ],
+    "types": ["node", "opencc-js"],
     "paths": {
       "@/*": [
         "./*"
@@ -43,8 +39,5 @@
   "exclude": [
     "node_modules"
   ]
-},
-{
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types"]
 }
 
