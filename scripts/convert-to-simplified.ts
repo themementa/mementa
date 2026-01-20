@@ -7,6 +7,9 @@
  * 2. 執行：npx tsx scripts/convert-to-simplified.ts
  */
 
+import 'dotenv/config'
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { createClient } from "@supabase/supabase-js";
 import { Converter } from "opencc-js";
 
