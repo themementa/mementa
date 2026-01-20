@@ -17,7 +17,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": ["node", "opencc-js"],
+    "types": ["node"],
     "paths": {
       "@/*": [
         "./*"
