@@ -339,7 +339,6 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
   const displayText =
     quote.cleaned_text_zh_tw ||
     quote.cleaned_text_zh_cn ||
-    quote.cleaned_text_zh_hans ||
     quote.cleaned_text_en ||
     quote.original_text;
 

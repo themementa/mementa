@@ -34,7 +34,6 @@ export function QuoteDetailPage({ quote, isFavorited }: QuoteDetailPageProps) {
               ? displayText
               : (quote.cleaned_text_zh_tw ||
                   quote.cleaned_text_zh_cn ||
-                  quote.cleaned_text_zh_hans ||
                   quote.cleaned_text_en ||
                   quote.original_text ||
                   "")}

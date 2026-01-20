@@ -40,7 +40,6 @@ const DEFAULT_QUOTE: Quote = {
   original_text: "「成功不是終點，失敗也不是致命的，繼續前進的勇氣才是最重要的。」",
   cleaned_text_zh_tw: "成功不是終點，失敗也不是致命的，繼續前進的勇氣才是最重要的。",
   cleaned_text_zh_cn: "",
-  cleaned_text_zh_hans: "",
   cleaned_text_en: "",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString()

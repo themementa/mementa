@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
 type SystemQuoteSeed = {
   original_text: string;
@@ -7,7 +7,7 @@ type SystemQuoteSeed = {
   cleaned_text_zh_cn: string;
 };
 
-const DEFAULT_SYSTEM_QUOTES: SystemQuoteSeed[] = [
+export const DEFAULT_SYSTEM_QUOTES: SystemQuoteSeed[] = [
   {
     original_text: "Discipline aligns intent with action.",
     cleaned_text_en: "Discipline aligns intent with action.",
@@ -341,7 +341,7 @@ const DEFAULT_SYSTEM_QUOTES: SystemQuoteSeed[] = [
 ];
 
 export async function seedSystemQuotes(): Promise<void> {
-  const supabase = createSupabaseServerClient();
+  const supabase = createSupabaseServiceRoleClient();
 
   const { count, error: countError } = await supabase
     .from("system_quotes")
@@ -374,5 +374,16 @@ export async function seedSystemQuotes(): Promise<void> {
     console.error("[seedSystemQuotes] Insert failed:", insertError);
     throw new Error(insertError.message);
   }
+
+  const { count: finalCount, error: finalCountError } = await supabase
+    .from("system_quotes")
+    .select("id", { count: "exact", head: true });
+
+  if (finalCountError) {
+    console.error("[seedSystemQuotes] Count after insert failed:", finalCountError);
+    throw new Error(finalCountError.message);
+  }
+
+  console.log("SYSTEM QUOTES COUNT", finalCount ?? 0);
 }
 

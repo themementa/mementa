@@ -7,18 +7,18 @@
  * 2. 執行：npx tsx scripts/convert-to-simplified.ts
  */
 
-import 'dotenv/config'
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 import { createClient } from "@supabase/supabase-js";
 import { Converter } from "opencc-js";
+import { DEFAULT_SYSTEM_QUOTES } from "@/lib/seed-system-quotes";
 
 // 初始化 OpenCC 轉換器（繁體轉簡體）
 const converter = Converter({ from: "hk", to: "cn" });
 
 // 從環境變數讀取 Supabase 配置
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error("錯誤：請設置環境變數 NEXT_PUBLIC_SUPABASE_URL 和 SUPABASE_SERVICE_ROLE_KEY");
@@ -29,13 +29,56 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function convertQuotesToSimplified() {
-  console.log("開始轉換 system_quotes 為簡體中文...\n");
+  console.log("開始寫入 system_quotes 並轉換簡體中文...\n");
 
   try {
-    // 1. 獲取所有需要轉換的 system_quotes（cleaned_text_zh_tw 不為空，且 cleaned_text_zh_cn 為空）
+    const { count, error: countError } = await supabase
+      .from("system_quotes")
+      .select("id", { count: "exact", head: true });
+
+    if (countError) {
+      throw new Error(`獲取 system_quotes 數量失敗: ${countError.message}`);
+    }
+
+    const existingCount = count ?? 0;
+    console.log("SYSTEM QUOTES COUNT", existingCount);
+
+    if (existingCount === 0) {
+      const sanitizedQuotes = DEFAULT_SYSTEM_QUOTES.filter((quote) => quote.original_text);
+      if (sanitizedQuotes.length === 0) {
+        throw new Error("沒有可寫入的 system_quotes（original_text 為空）");
+      }
+
+      const { error: insertError } = await supabase
+        .from("system_quotes")
+        .insert(
+          sanitizedQuotes.map((quote) => ({
+            original_text: quote.original_text,
+            cleaned_text_zh_tw: quote.cleaned_text_zh_tw,
+            cleaned_text_zh_cn: quote.cleaned_text_zh_cn,
+            cleaned_text_en: quote.cleaned_text_en,
+          }))
+        );
+
+      if (insertError) {
+        throw new Error(`寫入 system_quotes 失敗: ${insertError.message}`);
+      }
+
+      const { count: afterCount, error: afterCountError } = await supabase
+        .from("system_quotes")
+        .select("id", { count: "exact", head: true });
+
+      if (afterCountError) {
+        throw new Error(`寫入後計數失敗: ${afterCountError.message}`);
+      }
+
+      console.log("SYSTEM QUOTES COUNT", afterCount ?? 0);
+    }
+
+    // 轉換並更新每條 quote（只更新 cleaned_text_zh_cn 為空的資料）
     const { data: quotes, error: fetchError } = await supabase
       .from("system_quotes")
-      .select("id, cleaned_text_zh_tw, cleaned_text_zh_cn")
+      .select("id, original_text, cleaned_text_zh_tw, cleaned_text_zh_cn, cleaned_text_en")
       .not("cleaned_text_zh_tw", "is", null)
       .or("cleaned_text_zh_cn.is.null,cleaned_text_zh_cn.eq.");
 
@@ -48,20 +91,24 @@ async function convertQuotesToSimplified() {
       return;
     }
 
-    // 過濾出需要轉換的 quotes（cleaned_text_zh_cn 為空或 null）
     const quotesToConvert = quotes.filter(
-      (q) => q.cleaned_text_zh_tw && (!q.cleaned_text_zh_cn || q.cleaned_text_zh_cn.trim() === "")
+      (q) => q.original_text && q.cleaned_text_zh_tw && (!q.cleaned_text_zh_cn || q.cleaned_text_zh_cn.trim() === "")
     );
 
     console.log(`找到 ${quotesToConvert.length} 條 quotes 需要處理（總共 ${quotes.length} 條）\n`);
 
-    // 2. 轉換並更新每條 quote
     let successCount = 0;
     let skipCount = 0;
     let errorCount = 0;
 
     for (const quote of quotesToConvert) {
       try {
+        if (!quote.original_text) {
+          console.log(`[跳過] Quote ${quote.id}: original_text 為空`);
+          skipCount++;
+          continue;
+        }
+
         if (!quote.cleaned_text_zh_tw) {
           console.log(`[跳過] Quote ${quote.id}: cleaned_text_zh_tw 為空`);
           skipCount++;
@@ -74,7 +121,12 @@ async function convertQuotesToSimplified() {
         // 更新資料庫
         const { error: updateError } = await supabase
           .from("system_quotes")
-          .update({ cleaned_text_zh_cn: simplifiedText })
+          .update({
+            original_text: quote.original_text,
+            cleaned_text_zh_tw: quote.cleaned_text_zh_tw,
+            cleaned_text_zh_cn: simplifiedText,
+            cleaned_text_en: quote.cleaned_text_en ?? quote.original_text,
+          })
           .eq("id", quote.id);
 
         if (updateError) {

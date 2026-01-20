@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:connection": "tsx test-connection.ts",
-    "convert:zh-cn": "tsx scripts/convert-to-simplified.ts"
+    "convert:zh-cn": "tsx scripts/convert-to-simplified.ts",
+    "seed:system-quotes": "tsx scripts/convert-to-simplified.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

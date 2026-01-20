@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 import { getTodaysUserQuote } from "@/lib/daily-quotes-global";
 import { seedSystemQuotes } from "@/lib/seed-system-quotes";
 
@@ -23,6 +23,11 @@ export async function initializeUserData(
     }
 
     await seedSystemQuotes();
+    const systemCount = await getSystemQuotesCount();
+    if (systemCount === 0) {
+      console.error("[initializeUserData] system_quotes is empty after seeding");
+      throw new Error("system_quotes is empty after seeding");
+    }
     await seedUserQuotes(userId);
     console.log("SEED QUOTES DONE", userId);
     if (options.source === "login") {
@@ -44,7 +49,7 @@ export async function initializeUserData(
       throw new Error("User quote seeding failed: 0 quotes after retry");
     }
 
-    await getTodaysUserQuote(userId);
+    await ensureTodaysQuoteForUser(userId);
     console.log("TODAY QUOTE DONE", userId);
     if (options.source === "login") {
       console.log("LOGIN TODAY QUOTE DONE", userId);
@@ -67,7 +72,7 @@ export async function initializeUserData(
 }
 
 export async function seedUserQuotes(userId: string): Promise<void> {
-  const supabase = createSupabaseServerClient();
+  const supabase = createSupabaseServiceRoleClient();
 
   const existingCount = await getUserQuoteCount(userId);
   if (existingCount >= MIN_QUOTES_REQUIRED) {
@@ -79,7 +84,7 @@ export async function seedUserQuotes(userId: string): Promise<void> {
 
   const { data: systemQuotes, error: fetchError } = await supabase
     .from("system_quotes")
-    .select("original_text, cleaned_text_en, cleaned_text_zh_tw, cleaned_text_zh_cn, cleaned_text_zh_hans");
+    .select("original_text, cleaned_text_en, cleaned_text_zh_tw, cleaned_text_zh_cn");
 
   if (fetchError) {
     console.error("[seedUserQuotes] Failed to fetch system quotes:", fetchError);
@@ -123,7 +128,6 @@ export async function seedUserQuotes(userId: string): Promise<void> {
           cleaned_text_en: quote.cleaned_text_en,
           cleaned_text_zh_tw: quote.cleaned_text_zh_tw,
           cleaned_text_zh_cn: quote.cleaned_text_zh_cn,
-          cleaned_text_zh_hans: quote.cleaned_text_zh_hans,
         }))
       );
 
@@ -138,7 +142,7 @@ export async function seedUserQuotes(userId: string): Promise<void> {
 }
 
 export async function getUserQuoteCount(userId: string): Promise<number> {
-  const supabase = createSupabaseServerClient();
+  const supabase = createSupabaseServiceRoleClient();
   const { count, error } = await supabase
     .from("quotes")
     .select("id", { count: "exact", head: true })
@@ -150,5 +154,73 @@ export async function getUserQuoteCount(userId: string): Promise<number> {
   }
 
   return count ?? 0;
+}
+
+async function getSystemQuotesCount(): Promise<number> {
+  const supabase = createSupabaseServiceRoleClient();
+  const { count, error } = await supabase
+    .from("system_quotes")
+    .select("id", { count: "exact", head: true });
+
+  if (error) {
+    console.error("[getSystemQuotesCount] Count failed:", error);
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+async function ensureTodaysQuoteForUser(userId: string): Promise<void> {
+  const supabase = createSupabaseServiceRoleClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: existing, error: existingError } = await supabase
+    .from("daily_quotes")
+    .select("quote_id")
+    .eq("user_id", userId)
+    .eq("date", today)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("[ensureTodaysQuoteForUser] Failed to check daily_quotes:", existingError);
+    throw new Error(existingError.message);
+  }
+
+  if (existing?.quote_id) {
+    return;
+  }
+
+  const { data: userQuotes, error: quotesError } = await supabase
+    .from("quotes")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (quotesError) {
+    console.error("[ensureTodaysQuoteForUser] Failed to fetch user quotes:", quotesError);
+    throw new Error(quotesError.message);
+  }
+
+  if (!userQuotes || userQuotes.length === 0) {
+    console.error("[ensureTodaysQuoteForUser] No user quotes available to create daily quote");
+    throw new Error("No user quotes available to create daily quote");
+  }
+
+  const randomIndex = Math.floor(Math.random() * userQuotes.length);
+  const selectedQuoteId = userQuotes[randomIndex].id;
+
+  const { error: insertError } = await supabase
+    .from("daily_quotes")
+    .insert({
+      user_id: userId,
+      date: today,
+      quote_id: selectedQuoteId,
+    });
+
+  if (insertError) {
+    console.error("[ensureTodaysQuoteForUser] Failed to insert daily_quote:", insertError);
+    throw new Error(insertError.message);
+  }
+
+  console.log("TODAY QUOTE CREATED", userId, selectedQuoteId);
 }
 
