@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
-import { initializeUserData } from "@/lib/user-init";
+import { getUserQuoteCount, initializeUserData } from "@/lib/user-init";
 
 /**
  * Signup Route Handler
@@ -60,6 +60,8 @@ export async function POST(request: Request) {
     // Initialize user data - await to ensure seeding completes before redirect
     try {
       await initializeUserData(signUpData.user.id, { source: "signup" });
+      const userQuoteCount = await getUserQuoteCount(signUpData.user.id);
+      console.log("USER QUOTES COUNT", signUpData.user.id, userQuoteCount);
       console.log("SIGNUP INIT FINISHED", signUpData.user.id);
     } catch (error) {
       console.error("SIGNUP INIT FAILED", signUpData.user.id, error);

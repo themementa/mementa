@@ -3,13 +3,11 @@ import { getCurrentUser } from "@/lib/auth";
 
 export type Quote = {
   id: string;
-  user_id: string;
   original_text: string;
   cleaned_text_zh_tw: string | null;
   cleaned_text_zh_cn: string | null;
   cleaned_text_en: string | null;
   created_at: string;
-  updated_at: string;
 };
 
 export async function getAllQuotes(): Promise<Quote[]> {
