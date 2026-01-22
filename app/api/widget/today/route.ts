@@ -4,7 +4,7 @@ import { getFavoriteQuotesForUser } from "@/lib/favorites";
 import { getAllQuotes } from "@/lib/quotes";
 import type { Quote } from "@/lib/quotes";
 
-export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type Language = "zh-tw" | "zh-cn" | "en";
 
@@ -36,11 +36,13 @@ function getDisplayText(quote: Quote, language: Language): string {
 // 預設金句（如果用戶沒有收藏）
 const DEFAULT_QUOTE: Quote = {
   id: "default",
+  user_id: null,
   original_text: "「成功不是終點，失敗也不是致命的，繼續前進的勇氣才是最重要的。」",
   cleaned_text_zh_tw: "成功不是終點，失敗也不是致命的，繼續前進的勇氣才是最重要的。",
-  cleaned_text_zh_cn: "",
-  cleaned_text_en: "",
-  created_at: new Date().toISOString()
+  cleaned_text_zh_cn: null,
+  cleaned_text_en: null,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
 };
 
 export async function GET(request: NextRequest) {

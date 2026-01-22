@@ -8,13 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "test:connection": "tsx test-connection.ts",
-    "convert:zh-cn": "tsx scripts/convert-to-simplified.ts",
-    "seed:system-quotes": "tsx scripts/convert-to-simplified.ts"
+    "convert:zh-cn": "tsx scripts/convert-to-simplified.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.5.2",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.48.0",
-    "lucide-react": "^0.263.1",
     "next": "14.2.15",
     "opencc-js": "^1.0.5",
     "react": "^18.3.1",
