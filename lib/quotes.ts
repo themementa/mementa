@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "./supabase/server";
 
 export type Quote = {
   id: string;
@@ -12,36 +12,48 @@ export type Quote = {
 };
 
 export async function getAllQuotes(): Promise<Quote[]> {
-  const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("quotes")
-    .select("*")
-    .order("created_at", { ascending: false });
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("quotes")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      console.error("[quotes/getAllQuotes] supabase error:", error);
+      throw new Error(error.message);
+    }
+
+    return (data ?? []) as Quote[];
+  } catch (error) {
+    console.error("[quotes/getAllQuotes] server error:", error);
+    throw error;
   }
-
-  return (data ?? []) as Quote[];
 }
 
 export async function getQuoteById(id: string): Promise<Quote | null> {
-  const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("quotes")
-    .select("*")
-    .eq("id", id)
-    .single();
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("quotes")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-  if (error) {
-    if (error.code === "PGRST116") {
-      // not found
-      return null;
+    if (error) {
+      if (error.code === "PGRST116") {
+        // not found
+        return null;
+      }
+      console.error("[quotes/getQuoteById] supabase error:", error);
+      throw new Error(error.message);
     }
-    throw new Error(error.message);
-  }
 
-  return data as Quote;
+    return data as Quote;
+  } catch (error) {
+    console.error("[quotes/getQuoteById] server error:", error);
+    throw error;
+  }
 }
 
 export async function updateQuote(params: {
@@ -51,34 +63,40 @@ export async function updateQuote(params: {
   cleanedTextZhCn?: string | null;
   cleanedTextEn?: string | null;
 }): Promise<Quote> {
-  const supabase = createSupabaseServerClient();
-  const payload: Record<string, unknown> = {};
+  try {
+    const supabase = createSupabaseServerClient();
+    const payload: Record<string, unknown> = {};
 
-  if (params.originalText !== undefined) {
-    payload.original_text = params.originalText;
-  }
-  if (params.cleanedTextZhTw !== undefined) {
-    payload.cleaned_text_zh_tw = params.cleanedTextZhTw;
-  }
-  if (params.cleanedTextZhCn !== undefined) {
-    payload.cleaned_text_zh_cn = params.cleanedTextZhCn;
-  }
-  if (params.cleanedTextEn !== undefined) {
-    payload.cleaned_text_en = params.cleanedTextEn;
-  }
+    if (params.originalText !== undefined) {
+      payload.original_text = params.originalText;
+    }
+    if (params.cleanedTextZhTw !== undefined) {
+      payload.cleaned_text_zh_tw = params.cleanedTextZhTw;
+    }
+    if (params.cleanedTextZhCn !== undefined) {
+      payload.cleaned_text_zh_cn = params.cleanedTextZhCn;
+    }
+    if (params.cleanedTextEn !== undefined) {
+      payload.cleaned_text_en = params.cleanedTextEn;
+    }
 
-  const { data, error } = await supabase
-    .from("quotes")
-    .update(payload)
-    .eq("id", params.id)
-    .select()
-    .single();
+    const { data, error } = await supabase
+      .from("quotes")
+      .update(payload)
+      .eq("id", params.id)
+      .select()
+      .single();
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      console.error("[quotes/updateQuote] supabase error:", error);
+      throw new Error(error.message);
+    }
+
+    return data as Quote;
+  } catch (error) {
+    console.error("[quotes/updateQuote] server error:", error);
+    throw error;
   }
-
-  return data as Quote;
 }
 
 
