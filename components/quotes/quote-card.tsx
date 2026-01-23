@@ -32,7 +32,7 @@ export function QuoteCard({
           href={`/quote/${quote.id}`}
           className="flex-1 focus:outline-none focus:ring-2 focus:ring-soft-purple rounded-xl"
         >
-          <p className="text-lg md:text-xl text-neutral-800 text-content-tone">
+          <p className="text-lg md:text-xl leading-relaxed text-neutral-800">
             {displayText}
           </p>
         </Link>

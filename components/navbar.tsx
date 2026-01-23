@@ -1,188 +1,128 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { signOut } from "@/actions/auth-actions";
 import { useLanguage } from "@/app/providers/language-provider";
 import { getTranslation } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
 
-/**
- * Phase 1 Navbar - 包含 7 個核心功能
- * 順序：1. 今日一句 2. 文字收藏 3. 我收藏的 4. 我的句子 5. 語言選項 6. 我的設定 7. 登出
- * 規則：全站固定可見、當前頁面有 active 狀態、所有文字使用系統標準字
- */
 export function Navbar() {
   const { language, setLanguage } = useLanguage();
-  const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-
-    // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setIsLoading(false);
-    });
-
-    // Subscribe to auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // 判斷當前頁面是否為 active
-  const isActive = (path: string) => {
-    if (path === "/home") {
-      return pathname === "/home" || pathname === "/";
-    }
-    return pathname === path;
-  };
-
-  // 獲取 active 樣式
-  const getActiveClass = (path: string) => {
-    return isActive(path) ? "bg-stone-100" : "";
-  };
-
-  // 獲取 active 文字樣式
-  const getActiveTextClass = (path: string) => {
-    return isActive(path) ? "text-stone-900 font-medium" : "text-gray-700";
-  };
-
-  const handleLogout = async () => {
-    try {
-      const res = await fetch("/api/auth/logout", { method: "POST" });
-      if (res.ok) {
-        setUser(null);
-        window.location.href = "/login";
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
-  // Always render navbar in protected routes
-  // Auth state will update via onAuthStateChange subscription
-  // The navbar will appear immediately and update when auth state is confirmed
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-soft-pink-dark/30 pb-3 pt-3">
       <nav className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {/* 1. 今日一句 ☀️ */}
           <Link
-            href="/home"
-            className={`flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-pink touch-manipulation min-h-[44px] min-w-[44px] ${getActiveClass(
-              "/home"
-            )}`}
+            href="/"
+            className="flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-pink touch-manipulation min-h-[44px] min-w-[44px]"
             title={getTranslation(language, "todaysQuote")}
           >
-            <span className="text-xl">☀️</span>
-            <span className={`text-xs ${getActiveTextClass("/home")}`}>
+            <span className="text-xl">🏠</span>
+            <span className="text-xs text-gray-700">
               {getTranslation(language, "todaysQuote")}
             </span>
           </Link>
-
-          {/* 2. 文字收藏 🔖 */}
           <Link
             href="/quotes"
-            className={`flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-purple touch-manipulation min-h-[44px] min-w-[44px] ${getActiveClass(
-              "/quotes"
-            )}`}
+            className="flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-purple touch-manipulation min-h-[44px] min-w-[44px]"
             title={getTranslation(language, "allQuotes")}
           >
-            <span className="text-xl">🔖</span>
-            <span className={`text-xs ${getActiveTextClass("/quotes")}`}>
+            <span className="text-xl">📚</span>
+            <span className="text-xs text-gray-700">
               {getTranslation(language, "allQuotes")}
             </span>
           </Link>
-
-          {/* 3. 我收藏的 💛 */}
           <Link
             href="/favorites"
-            className={`flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-pink touch-manipulation min-h-[44px] min-w-[44px] ${getActiveClass(
-              "/favorites"
-            )}`}
+            className="flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-pink touch-manipulation min-h-[44px] min-w-[44px]"
             title={getTranslation(language, "favorites")}
           >
-            <span className="text-xl">💛</span>
-            <span className={`text-xs ${getActiveTextClass("/favorites")}`}>
+            <span className="text-xl">⭐</span>
+            <span className="text-xs text-gray-700">
               {getTranslation(language, "favorites")}
             </span>
           </Link>
-
-          {/* 4. 我的句子 ✍️ */}
+          <Link
+            href="/relationship"
+            className="flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-lavender touch-manipulation min-h-[44px] min-w-[44px]"
+            title={getTranslation(language, "relationship")}
+          >
+            <svg 
+              className="w-5 h-5 text-gray-700" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.312-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" 
+              />
+            </svg>
+            <span className="text-xs text-gray-700">
+              {getTranslation(language, "relationship")}
+            </span>
+          </Link>
           <Link
             href="/moments"
-            className={`flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-lavender touch-manipulation min-h-[44px] min-w-[44px] ${getActiveClass(
-              "/moments"
-            )}`}
+            className="flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-lavender touch-manipulation min-h-[44px] min-w-[44px]"
             title={getTranslation(language, "myMoments")}
           >
-            <span className="text-xl">✍️</span>
-            <span className={`text-xs ${getActiveTextClass("/moments")}`}>
+            <svg 
+              className="w-5 h-5 text-gray-700" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" 
+              />
+            </svg>
+            <span className="text-xs text-gray-700">
               {getTranslation(language, "myMoments")}
             </span>
           </Link>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* 5. 語言選項 🌐 */}
-          <LanguageSwitcher
-            language={language ?? "zh-tw"}
+          {/* 語言切換器 */}
+          <LanguageSwitcher 
+            language={language ?? "zh-tw"} 
             onLanguageChange={setLanguage}
           />
 
-          {/* 6. 我的設定 ⚙️ */}
-          <Link
-            href="/settings"
-            className={`flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-lavender touch-manipulation min-h-[44px] min-w-[44px] ${getActiveClass(
-              "/settings"
-            )}`}
-            title={getTranslation(language, "settings")}
-          >
-            <span className="text-xl">⚙️</span>
-            <span className={`text-xs ${getActiveTextClass("/settings")}`}>
-              {getTranslation(language, "settings")}
-            </span>
-          </Link>
-
-          {/* 7. 登出 ⎋ */}
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-lavender touch-manipulation min-h-[44px] min-w-[44px]"
-            title={getTranslation(language, "logout")}
-          >
-            <svg
-              className="w-5 h-5 text-gray-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-lavender touch-manipulation min-h-[44px] min-w-[44px]"
+              title={getTranslation(language, "logout")}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
-              />
-            </svg>
-            <span className="text-xs text-gray-700">
-              {getTranslation(language, "logout")}
-            </span>
-          </button>
+              <svg 
+                className="w-5 h-5 text-gray-700" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" 
+                />
+              </svg>
+              <span className="text-xs text-gray-700">
+                {getTranslation(language, "logout")}
+              </span>
+            </button>
+          </form>
         </div>
       </nav>
     </header>
   );
 }
+

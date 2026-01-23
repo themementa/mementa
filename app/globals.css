@@ -11,37 +11,6 @@ body {
   background: linear-gradient(135deg, #FAF9F6 0%, #F7F6F3 50%, #F4F3F0 100%);
 }
 
-/* ============================================
-   文字樣式系統（只允許兩種樣式）
-   ============================================ */
-
-/* 🅰 樣式 A：情緒引導／頁面氛圍字（Heading Tone）
-   代表文字：「這一刻，只屬於你」
-   用途：情緒導入型標題、空狀態提示、頁面氛圍文字
-   禁止用於：導航列、功能名稱、設定頁、按鈕文字
-*/
-.text-heading-tone {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Helvetica Neue", sans-serif;
-  font-weight: 300;
-  font-style: normal;
-  letter-spacing: 0.01em;
-  line-height: 1.6;
-}
-
-/* 🅱 樣式 B：內容主體字（Content Tone）
-   代表文字：「我們寫下的故事，距離抺不掉。」
-   用途：所有可閱讀內容（金句、句子、卡片、列表）
-   必須用於：今日一句、文字收藏、我收藏的、我的句子
-*/
-.text-content-tone {
-  font-family: "Playfair Display", "Libre Baskerville", Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  font-style: normal;
-  letter-spacing: 0.025em;
-  line-height: 2.0;
-}
-
 @keyframes fade-out {
   0% {
     opacity: 1;
@@ -53,24 +22,6 @@ body {
 
 .animate-fade-out {
   animation: fade-out 2s ease-out forwards;
-}
-
-@keyframes fade-in {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 1s ease-in forwards;
-}
-
-.animate-fade-in-delay {
-  animation: fade-in 1s ease-in 0.5s forwards;
-  opacity: 0;
 }
 
 

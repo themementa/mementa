@@ -7,6 +7,7 @@ export type Journal = {
   quote_id: string;
   created_at: string;
   content: string;
+  created_at: string;
   updated_at: string;
 };
 
@@ -15,27 +16,20 @@ export type JournalWithQuote = Journal & {
 };
 
 /**
- * Get journal entry for a specific quote and date (same day)
- * Uses date string (YYYY-MM-DD) to find entry on the same day
+ * Get journal entry for a specific quote and date
  */
 export async function getJournalEntry(
   userId: string,
   quoteId: string,
-  dateString: string // YYYY-MM-DD format
+  created_at: string
 ): Promise<Journal | null> {
   const supabase = createSupabaseServerClient();
-  
-  // Get start and end of the day in ISO format
-  const startOfDay = `${dateString}T00:00:00.000Z`;
-  const endOfDay = `${dateString}T23:59:59.999Z`;
-  
   const { data, error } = await supabase
     .from("journals")
     .select("*")
     .eq("user_id", userId)
     .eq("quote_id", quoteId)
-    .gte("created_at", startOfDay)
-    .lte("created_at", endOfDay)
+    .eq("created_at", created_at)
     .single();
 
   if (error) {
@@ -51,30 +45,23 @@ export async function getJournalEntry(
 
 /**
  * Save or update journal entry
- * Same user + same quote_id + same day = only one journal entry
- * Uses date string (YYYY-MM-DD) to determine if entry exists on the same day
  */
 export async function saveJournalEntry(params: {
   userId: string;
   quoteId: string;
-  dateString: string; // YYYY-MM-DD format
+  created_at: string;
   content: string;
 }): Promise<Journal> {
   const supabase = createSupabaseServerClient();
 
-  // Get start and end of the day in ISO format
-  const startOfDay = `${params.dateString}T00:00:00.000Z`;
-  const endOfDay = `${params.dateString}T23:59:59.999Z`;
-
-  // Try to find existing entry for the same day
+  // Try to update existing entry first
   const { data: existing } = await supabase
     .from("journals")
     .select("*")
     .eq("user_id", params.userId)
     .eq("quote_id", params.quoteId)
-    .gte("created_at", startOfDay)
-    .lte("created_at", endOfDay)
-    .maybeSingle();
+    .eq("created_at", params.created_at)
+    .single();
 
   if (existing) {
     // Update existing entry
@@ -94,16 +81,14 @@ export async function saveJournalEntry(params: {
 
     return data as Journal;
   } else {
-    // Insert new entry with current timestamp
-    const now = new Date().toISOString();
+    // Insert new entry
     const { data, error } = await supabase
       .from("journals")
       .insert({
         user_id: params.userId,
         quote_id: params.quoteId,
-        created_at: now,
+        created_at: params.created_at,
         content: params.content,
-        updated_at: now,
       })
       .select()
       .single();
@@ -112,85 +97,7 @@ export async function saveJournalEntry(params: {
       throw new Error(error.message);
     }
 
-    try {
-      await ensureTomorrowDailyQuote();
-    } catch (dailyQuoteError) {
-      console.warn("[saveJournalEntry] Failed to ensure tomorrow's daily quote:", dailyQuoteError);
-    }
-
     return data as Journal;
-  }
-}
-
-async function ensureTomorrowDailyQuote(): Promise<void> {
-  const supabase = createSupabaseServerClient();
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowDate = tomorrow.toISOString().split("T")[0];
-
-  const { data: existing, error: existingError } = await supabase
-    .from("daily_quotes")
-    .select("quote_id")
-    .eq("date", tomorrowDate)
-    .maybeSingle();
-
-  if (existingError) {
-    throw new Error(existingError.message);
-  }
-
-  if (existing?.quote_id) {
-    return;
-  }
-
-  const { data: systemQuotes, error: systemQuotesError } = await supabase
-    .from("system_quotes")
-    .select("id");
-
-  if (systemQuotesError) {
-    throw new Error(systemQuotesError.message);
-  }
-
-  if (!systemQuotes || systemQuotes.length === 0) {
-    throw new Error("No system quotes available");
-  }
-
-  const randomIndex = Math.floor(Math.random() * systemQuotes.length);
-  const quoteId = systemQuotes[randomIndex].id;
-
-  const { error: insertError } = await supabase
-    .from("daily_quotes")
-    .upsert(
-      {
-        date: tomorrowDate,
-        quote_id: quoteId,
-      },
-      {
-        onConflict: "date",
-      }
-    );
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-}
-
-/**
- * Delete journal entry by ID
- */
-export async function deleteJournalEntry(
-  journalId: string,
-  userId: string
-): Promise<void> {
-  const supabase = createSupabaseServerClient();
-
-  const { error } = await supabase
-    .from("journals")
-    .delete()
-    .eq("id", journalId)
-    .eq("user_id", userId); // Ensure user owns this journal
-
-  if (error) {
-    throw new Error(error.message);
   }
 }
 

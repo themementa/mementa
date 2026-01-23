@@ -9,11 +9,7 @@ type QuoteDetailPageProps = {
 };
 
 export default async function QuoteDetailPageServer({ params }: QuoteDetailPageProps) {
-  // Middleware handles auth redirects, but we need user for favorites
   const user = await requireUser();
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
   const quote = await getQuoteById(params.id);
   const favoriteIds = await getFavoriteQuoteIdsForUser(user.id);
   const isFavorited = favoriteIds.includes(quote?.id ?? "");

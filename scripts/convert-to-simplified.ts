@@ -1,24 +1,35 @@
 /**
  * 繁簡轉換腳本
- * 將所有 system_quotes 的 cleaned_text_zh_tw（繁體）轉換為簡體並填入 cleaned_text_zh_cn
+ * 將所有 quotes 的 cleaned_text（繁體）轉換為簡體並填入 cleaned_text_zh_cn
  * 
  * 使用方法：
  * 1. 安裝依賴：npm install opencc
  * 2. 執行：npx tsx scripts/convert-to-simplified.ts
  */
 
-import dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+import 'dotenv/config'
 import { createClient } from "@supabase/supabase-js";
 import { Converter } from "opencc-js";
-import { DEFAULT_SYSTEM_QUOTES } from "@/lib/seed-system-quotes";
+import { logSupabaseKeyUsage } from "../lib/supabase/logging";
 
 // 初始化 OpenCC 轉換器（繁體轉簡體）
 const converter = Converter({ from: "hk", to: "cn" });
 
 // 從環境變數讀取 Supabase 配置
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+if (process.env.NODE_ENV === "development") {
+  console.log("=== SUPABASE CONFIG AUDIT ===");
+  console.log("URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log("ANON KEY PREFIX:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 20));
+  console.log("SERVICE KEY PREFIX:", process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20));
+  console.log("============================");
+}
+logSupabaseKeyUsage({
+  key: supabaseServiceKey,
+  keyName: process.env.SUPABASE_SERVICE_ROLE_KEY ? "service_role" : "anon",
+  source: "scripts/convert-to-simplified.ts",
+});
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error("錯誤：請設置環境變數 NEXT_PUBLIC_SUPABASE_URL 和 SUPABASE_SERVICE_ROLE_KEY");
@@ -29,57 +40,14 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function convertQuotesToSimplified() {
-  console.log("開始寫入 system_quotes 並轉換簡體中文...\n");
+  console.log("開始轉換 quotes 為簡體中文...\n");
 
   try {
-    const { count, error: countError } = await supabase
-      .from("system_quotes")
-      .select("id", { count: "exact", head: true });
-
-    if (countError) {
-      throw new Error(`獲取 system_quotes 數量失敗: ${countError.message}`);
-    }
-
-    const existingCount = count ?? 0;
-    console.log("SYSTEM QUOTES COUNT", existingCount);
-
-    if (existingCount === 0) {
-      const sanitizedQuotes = DEFAULT_SYSTEM_QUOTES.filter((quote) => quote.original_text);
-      if (sanitizedQuotes.length === 0) {
-        throw new Error("沒有可寫入的 system_quotes（original_text 為空）");
-      }
-
-      const { error: insertError } = await supabase
-        .from("system_quotes")
-        .insert(
-          sanitizedQuotes.map((quote) => ({
-            original_text: quote.original_text,
-            cleaned_text_zh_tw: quote.cleaned_text_zh_tw,
-            cleaned_text_zh_cn: quote.cleaned_text_zh_cn,
-            cleaned_text_en: quote.cleaned_text_en,
-          }))
-        );
-
-      if (insertError) {
-        throw new Error(`寫入 system_quotes 失敗: ${insertError.message}`);
-      }
-
-      const { count: afterCount, error: afterCountError } = await supabase
-        .from("system_quotes")
-        .select("id", { count: "exact", head: true });
-
-      if (afterCountError) {
-        throw new Error(`寫入後計數失敗: ${afterCountError.message}`);
-      }
-
-      console.log("SYSTEM QUOTES COUNT", afterCount ?? 0);
-    }
-
-    // 轉換並更新每條 quote（只更新 cleaned_text_zh_cn 為空的資料）
+    // 1. 獲取所有需要轉換的 quotes（cleaned_text 不為空，且 cleaned_text_zh_cn 為空）
     const { data: quotes, error: fetchError } = await supabase
-      .from("system_quotes")
-      .select("id, original_text, cleaned_text_zh_tw, cleaned_text_zh_cn, cleaned_text_en")
-      .not("cleaned_text_zh_tw", "is", null)
+      .from("quotes")
+      .select("id, cleaned_text, cleaned_text_zh_cn")
+      .not("cleaned_text", "is", null)
       .or("cleaned_text_zh_cn.is.null,cleaned_text_zh_cn.eq.");
 
     if (fetchError) {
@@ -91,49 +59,40 @@ async function convertQuotesToSimplified() {
       return;
     }
 
+    // 過濾出需要轉換的 quotes（cleaned_text_zh_cn 為空或 null）
     const quotesToConvert = quotes.filter(
-      (q) => q.original_text && q.cleaned_text_zh_tw && (!q.cleaned_text_zh_cn || q.cleaned_text_zh_cn.trim() === "")
+      (q) => q.cleaned_text && (!q.cleaned_text_zh_cn || q.cleaned_text_zh_cn.trim() === "")
     );
 
     console.log(`找到 ${quotesToConvert.length} 條 quotes 需要處理（總共 ${quotes.length} 條）\n`);
 
+    // 2. 轉換並更新每條 quote
     let successCount = 0;
     let skipCount = 0;
     let errorCount = 0;
 
     for (const quote of quotesToConvert) {
       try {
-        if (!quote.original_text) {
-          console.log(`[跳過] Quote ${quote.id}: original_text 為空`);
-          skipCount++;
-          continue;
-        }
-
-        if (!quote.cleaned_text_zh_tw) {
-          console.log(`[跳過] Quote ${quote.id}: cleaned_text_zh_tw 為空`);
+        if (!quote.cleaned_text) {
+          console.log(`[跳過] Quote ${quote.id}: cleaned_text 為空`);
           skipCount++;
           continue;
         }
 
         // 轉換繁體為簡體
-        const simplifiedText = converter(quote.cleaned_text_zh_tw);
+        const simplifiedText = converter(quote.cleaned_text);
 
         // 更新資料庫
         const { error: updateError } = await supabase
-          .from("system_quotes")
-          .update({
-            original_text: quote.original_text,
-            cleaned_text_zh_tw: quote.cleaned_text_zh_tw,
-            cleaned_text_zh_cn: simplifiedText,
-            cleaned_text_en: quote.cleaned_text_en ?? quote.original_text,
-          })
+          .from("quotes")
+          .update({ cleaned_text_zh_cn: simplifiedText })
           .eq("id", quote.id);
 
         if (updateError) {
           throw new Error(updateError.message);
         }
 
-        const preview = quote.cleaned_text_zh_tw.length > 30 ? quote.cleaned_text_zh_tw.substring(0, 30) + "..." : quote.cleaned_text_zh_tw;
+        const preview = quote.cleaned_text.length > 30 ? quote.cleaned_text.substring(0, 30) + "..." : quote.cleaned_text;
         const simplifiedPreview = simplifiedText.length > 30 ? simplifiedText.substring(0, 30) + "..." : simplifiedText;
         console.log(`[成功] Quote ${quote.id}: ${preview} → ${simplifiedPreview}`);
         successCount++;

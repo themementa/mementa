@@ -21,22 +21,15 @@ export function QuoteDetailPage({ quote, isFavorited }: QuoteDetailPageProps) {
   }, []);
 
   // Get display text based on current language with fallback
-  // getQuoteDisplayText already handles fallback: cleaned_text_zh_tw/en/cn → cleaned_text_en → original_text
   const displayText = getQuoteDisplayText(quote, language);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] px-4 py-8">
       <div className="w-full max-w-2xl space-y-6">
-        {/* Quote Display Block - 樣式 B：內容主體字 */}
+        {/* Quote Display Block - changes based on language selection */}
         <div className="rounded-2xl bg-white/90 backdrop-blur-sm border border-soft-pink-dark/20 shadow-sm p-6 md:p-8">
-          <blockquote className="text-xl md:text-2xl lg:text-3xl text-center text-neutral-800 text-content-tone">
-            {mounted
-              ? displayText
-              : (quote.cleaned_text_zh_tw ||
-                  quote.cleaned_text_zh_cn ||
-                  quote.cleaned_text_en ||
-                  quote.original_text ||
-                  "")}
+          <blockquote className="text-xl md:text-2xl lg:text-3xl leading-relaxed text-center text-neutral-800">
+            {mounted ? displayText : (quote.cleaned_text_zh_tw || quote.cleaned_text_zh_cn || quote.cleaned_text_en || "")}
           </blockquote>
         </div>
 

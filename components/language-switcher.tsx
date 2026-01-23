@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import type { Language } from "@/lib/i18n";
-import { getTranslation } from "@/lib/i18n";
-import { useLanguage } from "@/app/providers/language-provider";
 
 type LanguageSwitcherProps = {
   language: Language;
@@ -11,63 +8,36 @@ type LanguageSwitcherProps = {
 };
 
 export function LanguageSwitcher({ language, onLanguageChange }: LanguageSwitcherProps) {
-  const { language: currentLang } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-
-  const languages: { code: Language; label: string }[] = [
-    { code: "zh-tw", label: getTranslation(currentLang, "traditionalChinese") },
-    { code: "zh-cn", label: getTranslation(currentLang, "simplifiedChinese") },
-    { code: "en", label: getTranslation(currentLang, "english") },
-  ];
-
-  const handleLanguageSelect = (lang: Language) => {
-    onLanguageChange(lang);
-    setIsOpen(false);
+  const languages: Language[] = ["zh-tw", "en", "zh-cn"];
+  
+  const getLabel = (lang: Language): string => {
+    switch (lang) {
+      case "zh-tw":
+        return "繁";
+      case "zh-cn":
+        return "簡";
+      case "en":
+        return "EN";
+    }
   };
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-soft-lavender touch-manipulation min-h-[44px] min-w-[44px]"
-        title={getTranslation(currentLang, "languageOption")}
-      >
-        <span className="text-xl">🌐</span>
-        <span className="text-xs text-gray-700">
-          {getTranslation(currentLang, "languageOption")}
-        </span>
-      </button>
-
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
-          
-          {/* Dropdown Menu */}
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-stone-200 z-50">
-            <div className="py-2">
-              {languages.map((lang) => (
-                <button
-                  key={lang.code}
-                  type="button"
-                  onClick={() => handleLanguageSelect(lang.code)}
-                  className={`w-full text-left px-4 py-2 text-sm touch-manipulation ${
-                    language === lang.code
-                      ? "bg-stone-100 text-stone-900 font-medium"
-                      : "text-gray-700 hover:bg-stone-50"
-                  }`}
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+    <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm">
+      {languages.map((lang) => (
+        <button
+          key={lang}
+          type="button"
+          onClick={() => onLanguageChange(lang)}
+          className={`px-3 py-1.5 text-xs font-medium rounded touch-manipulation min-h-[44px] ${
+            language === lang
+              ? "bg-soft-purple text-white"
+              : "text-gray-600 hover:text-gray-800"
+          }`}
+        >
+          {getLabel(lang)}
+        </button>
+      ))}
     </div>
   );
 }
+

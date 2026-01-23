@@ -26,11 +26,11 @@ export function FavoritesPage({ quotes }: FavoritesPageProps) {
             {getTranslation(language, "myFavorites")}
           </h1>
           <div className="bg-white/50 rounded-3xl shadow-sm p-16 md:p-24 text-center">
-            <p className="text-lg text-stone-600 mb-8 text-heading-tone">
+            <p className="text-lg text-stone-600 mb-8 font-light">
               {getTranslation(language, "noFavorites")}
             </p>
             <Link
-              href="/home"
+              href="/quotes"
               className="inline-block px-6 py-3 text-sm font-normal rounded-lg bg-stone-100 text-stone-600 touch-manipulation min-h-[44px]"
             >
               {getTranslation(language, "goToFavorites")}

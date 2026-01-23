@@ -1,20 +1,22 @@
 "use server";
 
-import { getTodaysUserQuote } from "@/lib/daily-quotes-global";
-import { getCurrentUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
+import { getTodaysGlobalQuote } from "@/lib/daily-quotes-global";
 import type { Quote } from "@/lib/quotes";
 
 /**
- * Get today's quote for current user
- * - Uses user's quotes table
- * - Ensures daily_quotes row exists per user
+ * Get today's global quote (same for all users)
+ * Non-repeating: avoids quotes already used until all quotes are used
  */
 export async function getTodaysQuoteAction(): Promise<Quote> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("User must be authenticated to get today's quote");
+  await requireUser(); // Ensure user is authenticated
+
+  const todaysQuote = await getTodaysGlobalQuote();
+
+  if (!todaysQuote) {
+    throw new Error("No quotes available");
   }
 
-  return getTodaysUserQuote(user.id);
+  return todaysQuote;
 }
 

@@ -3,26 +3,20 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { Quote } from "@/lib/quotes";
 import { FavoriteButtonWithText } from "./favorite-button-with-text";
-import { getTranslation } from "@/lib/i18n";
+import { getQuoteDisplayText, getTranslation } from "@/lib/i18n";
 import { useLanguage } from "@/app/providers/language-provider";
 import { saveJournalAction, getJournalAction } from "@/actions/journal-actions";
-import { QuietShareModal } from "@/components/share/quiet-share-modal";
-import { ShareCard } from "@/components/share/share-card";
-import { AfterShare } from "@/components/share/after-share";
-import { useNightMode } from "@/hooks/use-night-mode";
-import { getNightModeStyles } from "@/lib/night-mode";
 
 type TodaysQuoteDisplayProps = {
-  quote: Quote | null | undefined;
+  quote: Quote;
   favoriteIds: string[];
-  focusMoment?: boolean;
 };
 
 
 /**
- * Generate a shareable image of text (quote or moment) using canvas
+ * Generate a shareable image of the quote using canvas
  */
-function generateShareImage(text: string): Promise<Blob> {
+function generateQuoteImage(quoteText: string): Promise<Blob> {
   return new Promise((resolve, reject) => {
     // Canvas dimensions
     const width = 1200;
@@ -51,7 +45,7 @@ function generateShareImage(text: string): Promise<Blob> {
     
     // Calculate text area
     const textAreaWidth = width - padding * 2;
-    const textAreaHeight = height - padding * 2;
+    const textAreaHeight = height - padding * 3 - 40; // Reserve space for app name
     
     // Font size - adjust based on text length
     const baseFontSize = 48;
@@ -65,12 +59,12 @@ function generateShareImage(text: string): Promise<Blob> {
     
     // Try to fit text with word wrapping
     // Handle both space-separated languages (English) and character-based languages (Chinese)
-    const hasSpaces = text.includes(" ");
+    const hasSpaces = quoteText.includes(" ");
     let testLines: string[] = [];
     
     if (hasSpaces) {
       // Space-separated: split by words
-      const words = text.split(/\s+/);
+      const words = quoteText.split(/\s+/);
       let currentLine = "";
       
       for (const word of words) {
@@ -90,7 +84,7 @@ function generateShareImage(text: string): Promise<Blob> {
       }
     } else {
       // Character-based: split by characters
-      const chars = text.split("");
+      const chars = quoteText.split("");
       let currentLine = "";
       
       for (const char of chars) {
@@ -126,7 +120,7 @@ function generateShareImage(text: string): Promise<Blob> {
     
     if (hasSpaces) {
       // Space-separated: split by words
-      const words = text.split(/\s+/);
+      const words = quoteText.split(/\s+/);
       let currentLine = "";
       
       for (const word of words) {
@@ -145,7 +139,7 @@ function generateShareImage(text: string): Promise<Blob> {
       }
     } else {
       // Character-based: split by characters
-      const chars = text.split("");
+      const chars = quoteText.split("");
       let currentLine = "";
       
       for (const char of chars) {
@@ -167,19 +161,17 @@ function generateShareImage(text: string): Promise<Blob> {
     // Draw quote text
     const finalLineHeight = fontSize * 1.6;
     const totalHeight = lines.length * finalLineHeight;
-    const startY = (height - totalHeight) / 2;
+    const startY = (height - totalHeight) / 2 - 20; // Slightly above center to make room for app name
     
     lines.forEach((line, index) => {
       const y = startY + index * finalLineHeight + fontSize / 2;
       ctx.fillText(line, width / 2, y);
     });
     
-    // Draw quiet source attribution in bottom-right corner
-    ctx.fillStyle = "#D1D5DB"; // Very light gray, low contrast
-    ctx.font = `300 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
-    ctx.textAlign = "right";
-    ctx.textBaseline = "bottom";
-    ctx.fillText("via mementa", width - padding, height - padding);
+    // Draw app name at bottom
+    ctx.fillStyle = "#9CA3AF"; // Light gray
+    ctx.font = `300 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+    ctx.fillText("Mementa", width / 2, height - padding);
     
     // Convert to blob
     canvas.toBlob((blob) => {
@@ -192,45 +184,14 @@ function generateShareImage(text: string): Promise<Blob> {
   });
 }
 
-export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMoment = false }: TodaysQuoteDisplayProps) {
+export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds }: TodaysQuoteDisplayProps) {
   const { language } = useLanguage();
-  const nightMode = useNightMode();
-  const nightStyles = getNightModeStyles();
-  
-  // If quote is null, render empty state
-  if (!initialQuote) {
-    return (
-      <div 
-        className="min-h-screen flex flex-col justify-center items-center px-4 py-12" 
-        style={{ 
-          background: nightMode 
-            ? 'linear-gradient(135deg, #2C2416 0%, #1F1A12 50%, #1A1510 100%)'
-            : 'linear-gradient(135deg, #FAF9F6 0%, #F7F6F3 50%, #F4F3F0 100%)',
-          transition: `background ${nightStyles.transitionDuration} ease-in-out`
-        }}
-      >
-        <div className="w-full max-w-2xl text-center">
-          <p className="text-lg md:text-xl text-stone-600 text-content-tone">
-            今日仲未有金句 ✨ 去 Quotes 加一句先～
-          </p>
-        </div>
-      </div>
-    );
-  }
-  
   const [quote] = useState<Quote>(initialQuote);
   const [mounted, setMounted] = useState(false);
   const [journalText, setJournalText] = useState("");
   const [showSaveMessage, setShowSaveMessage] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Share flow states
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showShareCard, setShowShareCard] = useState(false);
-  const [shareContent, setShareContent] = useState<string>("");
-  const [shareType, setShareType] = useState<"quote" | "moment">("quote");
-  const [showAfterShare, setShowAfterShare] = useState(false);
 
   // Ensure client-side rendering to avoid hydration issues
   useEffect(() => {
@@ -244,9 +205,9 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
     const loadJournal = async () => {
       try {
         const today = new Date().toISOString().split("T")[0];
-        const journal = await getJournalAction(quote.id, today);
-        if (journal) {
-          setJournalText(journal.content);
+        const result = await getJournalAction(quote.id, today);
+        if (result.journal && !result.error) {
+          setJournalText(result.journal.content);
         }
       } catch (error) {
         console.error("Failed to load journal:", error);
@@ -255,27 +216,6 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
     
     loadJournal();
   }, [quote.id, mounted]);
-
-  // Focus on textarea if focusMoment is true (from prop or localStorage)
-  useEffect(() => {
-    if (!mounted) return;
-
-    // Check localStorage for focus moment flag
-    const shouldFocus = focusMoment || (typeof window !== "undefined" && localStorage.getItem("mementa_focus_moment") === "true");
-    
-    if (shouldFocus && textareaRef.current) {
-      // Clear the flag
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("mementa_focus_moment");
-      }
-      // Small delay to ensure textarea is rendered
-      setTimeout(() => {
-        textareaRef.current?.focus();
-        // Scroll to textarea smoothly
-        textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 500);
-    }
-  }, [focusMoment, mounted]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -336,11 +276,8 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
   }, []);
 
   const isFavorited = favoriteIds.includes(quote.id);
-  const displayText =
-    quote.cleaned_text_zh_tw ||
-    quote.cleaned_text_zh_cn ||
-    quote.cleaned_text_en ||
-    quote.original_text;
+  // Display text changes based on language, but quote remains the same
+  const displayText = getQuoteDisplayText(quote, language ?? "zh-tw");
 
   // Format today's date - minimal, elegant
   const today = new Date();
@@ -360,56 +297,22 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
     ? "这一刻，只属于你" 
     : "這一刻，只屬於你";
 
-  // Get placeholder text based on night mode
-  const getJournalPlaceholder = () => {
-    if (nightMode) {
-      return getTranslation(language ?? "zh-tw", "journalPlaceholderNight");
-    }
-    return getTranslation(language ?? "zh-tw", "journalPlaceholder");
-  };
-
-  // Get page title based on night mode
-  const getPageTitle = () => {
-    if (nightMode) {
-      return getTranslation(language ?? "zh-tw", "tonightsQuote");
-    }
-    return getTranslation(language ?? "zh-tw", "todaysQuote");
-  };
-
-  const handleQuietShare = () => {
-    setShowShareModal(true);
-  };
-
-  const handleShareQuote = () => {
-    setShareContent(displayText);
-    setShareType("quote");
-    setShowShareModal(false);
-    setShowShareCard(true);
-  };
-
-  const handleShareMoment = () => {
-    if (!journalText.trim()) return;
-    setShareContent(journalText);
-    setShareType("moment");
-    setShowShareModal(false);
-    setShowShareCard(true);
-  };
-
-  const handlePerformShare = async () => {
+  const handleShare = async () => {
+    if (!quote || !displayText) return;
+    
     try {
       // Generate image
-      const blob = await generateShareImage(shareContent);
-      const file = new File([blob], "mementa-share.png", { type: "image/png" });
+      const blob = await generateQuoteImage(displayText);
+      const file = new File([blob], "mementa-quote.png", { type: "image/png" });
       
       // Try Web Share API first (if supported)
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
           await navigator.share({
             files: [file],
-            text: shareContent,
+            title: "今日金句",
+            text: displayText,
           });
-          setShowShareCard(false);
-          setShowAfterShare(true);
           return;
         } catch (shareError) {
           // If share fails, fall back to download
@@ -421,26 +324,20 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "mementa-share.png";
+      link.download = "mementa-quote.png";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
-      setShowShareCard(false);
-      setShowAfterShare(true);
     } catch (error) {
       console.error("Failed to generate or share image:", error);
+      alert("無法生成圖片，請稍後再試");
     }
   };
 
-  const backgroundStyle = nightMode 
-    ? nightStyles.background 
-    : 'linear-gradient(135deg, #FAF9F6 0%, #F7F6F3 50%, #F4F3F0 100%)';
-
   if (!mounted) {
     return (
-      <div className="min-h-screen flex flex-col justify-between px-4 py-12" style={{ background: backgroundStyle }}>
+      <div className="min-h-screen flex flex-col justify-between px-4 py-12" style={{ background: 'linear-gradient(135deg, #FAF9F6 0%, #F7F6F3 50%, #F4F3F0 100%)' }}>
         <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col justify-center">
           <div className="bg-white/60 rounded-3xl shadow-sm px-12 md:px-16 py-16 md:py-24">
             <div className="h-12 bg-gray-200 rounded mb-6"></div>
@@ -452,38 +349,29 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
   }
 
   return (
-    <div 
-      className="min-h-screen flex flex-col justify-between px-4 py-12" 
-      style={{ 
-        background: backgroundStyle,
-        transition: `background ${nightStyles.transitionDuration} ease-in-out`
-      }}
-    >
+    <div className="min-h-screen flex flex-col justify-between px-4 py-12" style={{ background: 'linear-gradient(135deg, #FAF9F6 0%, #F7F6F3 50%, #F4F3F0 100%)' }}>
       <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col justify-center">
-        {/* Date Display - Top left, subtle - Hidden in night mode */}
-        {!nightMode && (
-          <div className="mb-12">
-            <p className="text-[11px] text-stone-400 font-sans">
-              {dateString}
-            </p>
-          </div>
-        )}
+        {/* Date Display - Top left, subtle */}
+        <div className="mb-12">
+          <p className="text-[11px] text-stone-400 font-sans">
+            {dateString}
+          </p>
+        </div>
 
-        {/* Transition Text - 樣式 A：情緒引導文字 */}
+        {/* Transition Text - Fixed, body font, 40% smaller than quote, secondary color */}
         <div className="mb-10">
-          <p className="text-base md:text-lg lg:text-xl text-stone-500 text-center text-heading-tone">
+          <p className="text-base md:text-lg lg:text-xl text-stone-500 font-sans font-light text-center">
             {transitionText}
           </p>
         </div>
 
-        {/* Quote Display - 樣式 B：內容主體字 */}
+        {/* Quote Display - Serif font, book-like, spacious, calm */}
         <div className="bg-white/50 rounded-3xl shadow-sm px-12 md:px-16 py-20 md:py-32 mb-12">
           <blockquote 
-            className="text-lg md:text-xl lg:text-2xl text-center text-stone-700 text-content-tone" 
+            className="text-lg md:text-xl lg:text-2xl leading-[2.0] text-center text-stone-700 font-normal" 
             style={{ 
-              lineHeight: nightMode ? nightStyles.lineHeight : '2.0',
-              letterSpacing: nightMode ? nightStyles.letterSpacing : '0.025em',
-              transition: `line-height ${nightStyles.transitionDuration}, letter-spacing ${nightStyles.transitionDuration}`
+              fontFamily: '"Playfair Display", "Libre Baskerville", Georgia, "Times New Roman", serif',
+              letterSpacing: '0.025em'
             }}
           >
             {displayText}
@@ -492,8 +380,8 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
 
         {/* Journaling Section */}
         <div className="w-full max-w-4xl mx-auto">
-          {/* Label - 樣式 A：情緒引導文字 */}
-          <p className="text-sm md:text-base text-stone-500 mb-3 text-left text-heading-tone">
+          {/* Label */}
+          <p className="text-sm md:text-base text-stone-500 font-sans font-light mb-3 text-left">
             {getTranslation(language ?? "zh-tw", "thisMomentIsYours")}
           </p>
 
@@ -503,13 +391,11 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
               ref={textareaRef}
               value={journalText}
               onChange={(e) => handleChange(e.target.value)}
-              placeholder={getJournalPlaceholder()}
-              className="w-full bg-white/40 rounded-xl px-4 py-3 text-base font-normal text-stone-700 font-sans resize-none overflow-hidden focus:outline-none focus:ring-0 focus:bg-white/50"
+              placeholder={getTranslation(language ?? "zh-tw", "journalPlaceholder")}
+              className="w-full bg-white/40 rounded-xl px-4 py-3 text-base font-normal text-stone-700 font-sans resize-none overflow-hidden focus:outline-none focus:ring-0 focus:bg-white/50 transition-colors"
               style={{
                 minHeight: "48px",
-                lineHeight: nightMode ? nightStyles.lineHeight : "1.6",
-                letterSpacing: nightMode ? nightStyles.letterSpacing : "normal",
-                transition: `line-height ${nightStyles.transitionDuration}, letter-spacing ${nightStyles.transitionDuration}, background-color ${nightStyles.transitionDuration}`
+                lineHeight: "1.6"
               }}
             />
             
@@ -529,37 +415,13 @@ export function TodaysQuoteDisplay({ quote: initialQuote, favoriteIds, focusMome
         
         <button
           type="button"
-          onClick={handleQuietShare}
+          onClick={handleShare}
           className="px-3 py-1.5 text-[11px] font-normal rounded-md bg-transparent text-stone-400 touch-manipulation min-h-[36px] flex items-center justify-center gap-1.5 hover:text-stone-600"
         >
-          <span>{getTranslation(language ?? "zh-tw", "quietShareAMoment")}</span>
+          <span className="text-sm">📤</span>
+          <span>{language === "zh-tw" ? "分享" : language === "zh-cn" ? "分享" : "Share"}</span>
         </button>
       </div>
-
-      {/* Share Flow Modals */}
-      <QuietShareModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        onShareQuote={handleShareQuote}
-        onShareMoment={handleShareMoment}
-        hasMoment={!!journalText.trim()}
-      />
-
-      {showShareCard && (
-        <ShareCard
-          content={shareContent}
-          type={shareType}
-          onShare={handlePerformShare}
-          onCancel={() => setShowShareCard(false)}
-        />
-      )}
-
-      {showAfterShare && (
-        <AfterShare
-          onClose={() => setShowAfterShare(false)}
-          sharedContent={shareContent}
-        />
-      )}
     </div>
   );
 }
