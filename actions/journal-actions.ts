@@ -1,10 +1,6 @@
 "use server";
 
-export async function saveJournalAction(
-  quoteId?: string,
-  content?: string,
-  date?: string
-) {
+export async function saveJournalAction(formData?: FormData) {
   return { success: true };
 }
 
