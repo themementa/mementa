@@ -15,12 +15,17 @@ export default function LoginPage() {
     event.preventDefault();
     setError(null);
     startTransition(async () => {
+      console.error("[auth/login] env presence:", {
+        NEXT_PUBLIC_SUPABASE_URL: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+      });
       const supabase = createSupabaseBrowserClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (signInError) {
+        console.error("[auth/login] signInWithPassword error:", signInError);
         setError(signInError.message || "系統錯誤，請稍後再試");
         return;
       }

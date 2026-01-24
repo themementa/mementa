@@ -3,6 +3,10 @@ import { createServerClient } from "@supabase/auth-helpers-nextjs";
 
 export function createSupabaseServerClient() {
   const cookieStore = cookies();
+  console.error("[supabase/server] cookie presence:", {
+    hasAuthToken: Boolean(cookieStore.get("sb-access-token")?.value),
+    hasRefreshToken: Boolean(cookieStore.get("sb-refresh-token")?.value),
+  });
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
